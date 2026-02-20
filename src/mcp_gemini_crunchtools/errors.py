@@ -1,0 +1,101 @@
+"""Safe error types that can be shown to users.
+
+This module defines exception classes that are safe to expose to MCP clients.
+Internal errors should be caught and converted to UserError before propagating.
+"""
+
+import os
+
+
+class UserError(Exception):
+    """Base class for safe errors that can be shown to users.
+
+    All error messages in UserError subclasses must be carefully crafted
+    to avoid leaking sensitive information like API keys or internal paths.
+    """
+
+    pass
+
+
+class ConfigurationError(UserError):
+    """Error in server configuration."""
+
+    pass
+
+
+class GeminiApiError(UserError):
+    """Error from Google Gemini API.
+
+    The message is sanitized to remove any API key references.
+    """
+
+    def __init__(self, message: str) -> None:
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        safe_message = message.replace(api_key, "***") if api_key else message
+        super().__init__(f"Gemini API error: {safe_message}")
+
+
+class ImageGenerationError(UserError):
+    """Error during image generation."""
+
+    pass
+
+
+class ImageTooLargeError(UserError):
+    """Image file exceeds size limit."""
+
+    def __init__(self, size_bytes: int, max_bytes: int) -> None:
+        max_mb = max_bytes // (1024 * 1024)
+        super().__init__(f"Image too large ({size_bytes} bytes). Max: {max_mb}MB.")
+
+
+class FileNotFoundSafeError(UserError):
+    """File not found at specified path."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"File not found: {path}")
+
+
+class InvalidFilePathError(UserError):
+    """Invalid file path format."""
+
+    def __init__(self) -> None:
+        super().__init__("file_path must be an absolute path.")
+
+
+class SessionNotFoundError(UserError):
+    """Image editing session not found."""
+
+    def __init__(self, session_id: str) -> None:
+        super().__init__(f"Image editing session not found: {session_id}")
+
+
+class RateLimitError(UserError):
+    """API rate limit exceeded."""
+
+    def __init__(self, message: str = "Rate limit exceeded.") -> None:
+        super().__init__(message)
+
+
+class ValidationError(UserError):
+    """Input validation error."""
+
+    pass
+
+
+class VideoGenerationError(UserError):
+    """Error during video generation."""
+
+    pass
+
+
+class ResearchError(UserError):
+    """Error during deep research."""
+
+    pass
+
+
+class CacheError(UserError):
+    """Error with content caching."""
+
+    pass
