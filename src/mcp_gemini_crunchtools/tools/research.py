@@ -96,7 +96,7 @@ async def gemini_research_followup(
     )
 
     response = client.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemini-2.0-flash-exp",
         contents=[prompt],
     )
 

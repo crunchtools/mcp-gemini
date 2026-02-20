@@ -7,9 +7,10 @@ from google.genai import types
 from ..client import get_client
 
 # Model name mapping
+# Using Gemini 2.0 stable models instead of preview models
 MODEL_MAP: dict[str, str] = {
-    "pro": "gemini-3-pro-preview",
-    "flash": "gemini-3-flash-preview",
+    "pro": "gemini-2.0-pro-exp",
+    "flash": "gemini-2.0-flash-exp",
 }
 
 

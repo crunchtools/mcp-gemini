@@ -87,7 +87,7 @@ async def gemini_query_cache(
     )
 
     response = client.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemini-2.0-flash-exp",
         contents=[question],
         config=config,
     )
