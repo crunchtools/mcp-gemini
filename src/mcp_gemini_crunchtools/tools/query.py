@@ -7,10 +7,10 @@ from google.genai import types
 from ..client import get_client
 
 # Model name mapping
-# SDK uses v1beta for multimodal features, which requires unversioned names
+# Using latest stable Gemini 2.5 models
 MODEL_MAP: dict[str, str] = {
-    "pro": "gemini-1.5-pro-latest",
-    "flash": "gemini-1.5-flash-latest",
+    "pro": "gemini-2.5-pro",
+    "flash": "gemini-2.5-flash",
 }
 
 

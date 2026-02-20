@@ -50,7 +50,7 @@ async def gemini_generate_image(
     config = types.GenerateContentConfig(**config_kwargs)
 
     response = client.generate_content(
-        model="gemini-1.5-flash-latest",
+        model="gemini-2.5-flash-image",
         contents=[full_prompt],
         config=config,
     )
@@ -101,7 +101,7 @@ async def gemini_generate_image_with_input(
     )
 
     response = client.generate_content(
-        model="gemini-1.5-flash-latest",
+        model="gemini-2.5-flash-image",
         contents=[prompt, input_image],
         config=config,
     )
