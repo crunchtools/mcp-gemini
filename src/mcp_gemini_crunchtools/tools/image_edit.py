@@ -62,7 +62,7 @@ async def gemini_start_image_edit(
         config_kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
 
     config = types.GenerateContentConfig(**config_kwargs)
-    chat = client.create_chat(model="gemini-1.5-flash", config=config)
+    chat = client.create_chat(model="gemini-1.5-flash-latest", config=config)
 
     # Build initial message
     contents: list[Any] = [prompt]

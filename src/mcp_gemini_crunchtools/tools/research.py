@@ -26,7 +26,7 @@ async def gemini_deep_research(
     client = get_client()
 
     response = client.generate_content(
-        model="gemini-1.5-pro",  # Using stable model instead of deep-research-pro-preview
+        model="gemini-1.5-pro-latest",  # Using stable versioned model
         contents=[query],
     )
 
@@ -96,7 +96,7 @@ async def gemini_research_followup(
     )
 
     response = client.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-1.5-flash-latest",
         contents=[prompt],
     )
 
