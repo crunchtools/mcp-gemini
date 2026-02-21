@@ -213,7 +213,7 @@ async def gemini_generate_image_tool(
 async def gemini_generate_image_with_input_tool(
     prompt: str,
     file_path: str,
-    aspect_ratio: str = "1:1",
+    _aspect_ratio: str = "1:1",
 ) -> dict[str, Any]:
     """Generate/edit an image using a local image file as input.
 
@@ -223,9 +223,8 @@ async def gemini_generate_image_with_input_tool(
     Args:
         prompt: Instructions for what to do with the input image.
         file_path: Absolute path to a local image file.
-        aspect_ratio: Desired aspect ratio for the output (currently unused).
+        _aspect_ratio: Desired aspect ratio for the output (currently unused).
     """
-    # aspect_ratio is currently unused by the underlying function
     return await gemini_generate_image_with_input(
         prompt=prompt, file_path=file_path,
     )
@@ -516,17 +515,16 @@ async def gemini_extract_from_url_tool(
 @mcp.tool()
 async def gemini_generate_video_tool(
     prompt: str,
-    aspect_ratio: str = "16:9",
+    _aspect_ratio: str = "16:9",
     negative_prompt: str | None = None,
 ) -> dict[str, Any]:
     """Generate a video using Veo. Returns an operation ID to poll.
 
     Args:
         prompt: Description of the video to generate.
-        aspect_ratio: Video aspect ratio (currently unused).
+        _aspect_ratio: Video aspect ratio (currently unused).
         negative_prompt: What to avoid in the video.
     """
-    # aspect_ratio is currently unused by the underlying function
     return await gemini_generate_video(
         prompt=prompt,
         negative_prompt=negative_prompt,
