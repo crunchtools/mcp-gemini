@@ -223,10 +223,11 @@ async def gemini_generate_image_with_input_tool(
     Args:
         prompt: Instructions for what to do with the input image.
         file_path: Absolute path to a local image file.
-        aspect_ratio: Desired aspect ratio for the output.
+        aspect_ratio: Desired aspect ratio for the output (currently unused).
     """
+    # aspect_ratio is currently unused by the underlying function
     return await gemini_generate_image_with_input(
-        prompt=prompt, file_path=file_path, aspect_ratio=aspect_ratio,
+        prompt=prompt, file_path=file_path,
     )
 
 
@@ -522,11 +523,12 @@ async def gemini_generate_video_tool(
 
     Args:
         prompt: Description of the video to generate.
-        aspect_ratio: Video aspect ratio.
+        aspect_ratio: Video aspect ratio (currently unused).
         negative_prompt: What to avoid in the video.
     """
+    # aspect_ratio is currently unused by the underlying function
     return await gemini_generate_video(
-        prompt=prompt, aspect_ratio=aspect_ratio,
+        prompt=prompt,
         negative_prompt=negative_prompt,
     )
 
