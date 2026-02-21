@@ -12,7 +12,7 @@ def save_generated_image(
     image_data: bytes,
     output_dir: Path,
     prefix: str = "gemini",
-    mime_type: str = "image/png",
+    _mime_type: str = "image/png",
 ) -> Path:
     """Save image bytes to disk, return the file path.
 
@@ -20,7 +20,7 @@ def save_generated_image(
         image_data: Raw image bytes.
         output_dir: Directory to save the image in.
         prefix: Filename prefix.
-        mime_type: MIME type of the image data.
+        _mime_type: MIME type of the image data (unused, always saves as PNG).
 
     Returns:
         Path to the saved image file.

@@ -7,14 +7,14 @@ from typing import Any
 from google.genai import types
 from PIL import Image
 
-from ..client import get_client
-from ..errors import ImageGenerationError, SessionNotFoundError
-from ..models import validate_file_exists
 from .._image_utils import (
     extract_image_from_response,
     extract_text_from_response,
     save_generated_image,
 )
+from ..client import get_client
+from ..errors import SessionNotFoundError
+from ..models import validate_file_exists
 
 # In-memory session store
 _sessions: dict[str, dict[str, Any]] = {}

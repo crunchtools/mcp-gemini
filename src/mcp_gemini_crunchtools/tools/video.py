@@ -7,7 +7,7 @@ from ..client import get_client
 
 async def gemini_generate_video(
     prompt: str,
-    aspect_ratio: str = "16:9",
+    _aspect_ratio: str = "16:9",
     negative_prompt: str | None = None,
 ) -> dict[str, Any]:
     """Generate a video using Veo.
@@ -17,7 +17,7 @@ async def gemini_generate_video(
 
     Args:
         prompt: Description of the video to generate.
-        aspect_ratio: Video aspect ratio.
+        _aspect_ratio: Video aspect ratio (currently unused).
         negative_prompt: What to avoid in the video.
 
     Returns:

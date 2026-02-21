@@ -5,14 +5,14 @@ from typing import Any
 from google.genai import types
 from PIL import Image
 
-from ..client import get_client
-from ..errors import ImageGenerationError
-from ..models import validate_file_exists
 from .._image_utils import (
     extract_image_from_response,
     extract_text_from_response,
     save_generated_image,
 )
+from ..client import get_client
+from ..errors import ImageGenerationError
+from ..models import validate_file_exists
 
 
 async def gemini_generate_image(
@@ -76,7 +76,7 @@ async def gemini_generate_image(
 async def gemini_generate_image_with_input(
     prompt: str,
     file_path: str,
-    aspect_ratio: str = "1:1",
+    _aspect_ratio: str = "1:1",
 ) -> dict[str, Any]:
     """Generate or edit an image using a local image file as input.
 
@@ -86,7 +86,7 @@ async def gemini_generate_image_with_input(
     Args:
         prompt: Instructions for what to do with the input image.
         file_path: Absolute path to a local image file.
-        aspect_ratio: Desired aspect ratio for the output.
+        _aspect_ratio: Desired aspect ratio for the output (currently unused).
 
     Returns:
         Path to the generated image and text response.

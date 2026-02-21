@@ -101,7 +101,7 @@ async def gemini_analyze_code(
     client = get_client()
     model_name = _resolve_model(model)
 
-    prompt = f"Analyze the following code"
+    prompt = "Analyze the following code"
     if language:
         prompt += f" ({language})"
     prompt += f" with focus on {focus}:\n\n```\n{code}\n```"
