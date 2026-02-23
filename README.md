@@ -123,9 +123,24 @@ pip install mcp-gemini-crunchtools
 ### With Container
 
 ```bash
-podman run -e GEMINI_API_KEY=your_key \
+# Create a shared output directory (required before first run)
+mkdir -p ~/.local/share/mcp-uploads-downloads
+
+podman run -v ~/.local/share/mcp-uploads-downloads:/output:z \
+    -e GEMINI_API_KEY=your_key \
+    -e GEMINI_OUTPUT_DIR=/output \
     quay.io/crunchtools/mcp-gemini
 ```
+
+> **SELinux note:** Use `:z` (lowercase, shared) instead of `:Z` (uppercase, private).
+> MCP servers run as long-lived stdio processes. With `:Z`, files copied into the
+> directory after container start won't have the container's private MCS label and
+> will be invisible inside the container. The `:z` flag sets a shared
+> `container_file_t` context that all containers and the host can read/write.
+>
+> **Tip:** Use the same shared directory (`~/.local/share/mcp-uploads-downloads/`)
+> across multiple MCP container servers (e.g., mcp-gemini and mcp-wordpress) so
+> generated images are immediately available for WordPress upload without copying.
 
 ## Configuration
 
@@ -155,19 +170,27 @@ claude mcp add mcp-gemini-crunchtools \
 Or for the container version:
 
 ```bash
+# Create a shared output directory (required before first run)
+mkdir -p ~/.local/share/mcp-uploads-downloads
+
 claude mcp add mcp-gemini-crunchtools \
     --env GEMINI_API_KEY=your_api_key_here \
-    -- podman run -i --rm -e GEMINI_API_KEY quay.io/crunchtools/mcp-gemini
+    --env GEMINI_OUTPUT_DIR=/output \
+    -- podman run -i --rm \
+        -v ~/.local/share/mcp-uploads-downloads:/output:z \
+        -e GEMINI_API_KEY \
+        -e GEMINI_OUTPUT_DIR=/output \
+        quay.io/crunchtools/mcp-gemini
 ```
 
-### Optional: Set Output Directory
+### Optional: Set Output Directory (non-container)
 
-For generated images, audio, and videos:
+For generated images, audio, and videos when running without a container:
 
 ```bash
 claude mcp add mcp-gemini-crunchtools \
     --env GEMINI_API_KEY=your_api_key_here \
-    --env GEMINI_OUTPUT_DIR=$HOME/.config/mcp-gemini-crunchtools/output \
+    --env GEMINI_OUTPUT_DIR=$HOME/.local/share/mcp-uploads-downloads \
     -- uvx mcp-gemini-crunchtools
 ```
 
