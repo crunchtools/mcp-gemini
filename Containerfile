@@ -7,17 +7,24 @@
 # Run:
 #   podman run -i --rm -e GEMINI_API_KEY quay.io/crunchtools/mcp-gemini
 #
-# With output directory (for generated images/audio):
+# With shared volume (for generated images/audio and input files):
+#   mkdir -p ~/.local/share/mcp-uploads-downloads
 #   podman run -i --rm \
-#     -v ~/.config/mcp-gemini-crunchtools/output:/output:Z \
+#     -v ~/.local/share/mcp-uploads-downloads:/output:z \
 #     -e GEMINI_API_KEY \
 #     -e GEMINI_OUTPUT_DIR=/output \
 #     quay.io/crunchtools/mcp-gemini
 #
 # With Claude Code:
+#   mkdir -p ~/.local/share/mcp-uploads-downloads
 #   claude mcp add mcp-gemini-crunchtools \
 #     --env GEMINI_API_KEY=your_key \
-#     -- podman run -i --rm -e GEMINI_API_KEY quay.io/crunchtools/mcp-gemini
+#     --env GEMINI_OUTPUT_DIR=/output \
+#     -- podman run -i --rm \
+#       -v ~/.local/share/mcp-uploads-downloads:/output:z \
+#       -e GEMINI_API_KEY \
+#       -e GEMINI_OUTPUT_DIR=/output \
+#       quay.io/crunchtools/mcp-gemini
 
 # Use Hummingbird Python image (Red Hat UBI-based with Python pre-installed)
 FROM quay.io/hummingbird/python:latest

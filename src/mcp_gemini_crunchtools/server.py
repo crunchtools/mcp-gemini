@@ -71,7 +71,18 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP(
     name="mcp-gemini-crunchtools",
     version="0.1.0",
-    instructions="MCP server for Google Gemini AI - text, image, video, research, and more",
+    instructions=(
+        "Secure MCP server for Google Gemini AI - text, image, video, research, and more. "
+        "Generated files (images, audio, video) are saved to the output directory. "
+        "When running natively (uvx/uv), the default output directory is "
+        "~/.config/mcp-gemini-crunchtools/output (override with GEMINI_OUTPUT_DIR). "
+        "When running as a container, files must be placed in "
+        "~/.local/share/mcp-uploads-downloads/ on the host (mounted to "
+        "/output inside the container). Use absolute paths like "
+        "/output/image.png for file_path parameters. "
+        "Input files for analysis (images, documents, PDFs) must also be "
+        "accessible at this same mount path when running as a container."
+    ),
 )
 
 
