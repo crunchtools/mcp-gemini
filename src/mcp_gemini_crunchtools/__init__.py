@@ -23,6 +23,7 @@ Example with Claude Code:
         -- uvx mcp-gemini-crunchtools
 """
 
+import argparse
 import logging
 import sys
 
@@ -43,4 +44,28 @@ def main() -> None:
         level=logging.WARNING,
         format="%(name)s: %(message)s",
     )
-    mcp.run()
+
+    parser = argparse.ArgumentParser(description="MCP server for Google Gemini AI")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "streamable-http"],
+        default="stdio",
+        help="Transport protocol (default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind to for HTTP transports (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind to for HTTP transports (default: 8000)",
+    )
+    args = parser.parse_args()
+
+    if args.transport == "stdio":
+        mcp.run()
+    else:
+        mcp.run(transport=args.transport, host=args.host, port=args.port)
