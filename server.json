@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.crunchtools/gemini",
+  "title": "MCP Gemini",
+  "description": "MCP server for Google Gemini AI - text, image, video, research, and more",
+  "repository": {
+    "url": "https://github.com/crunchtools/mcp-gemini",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "mcp-gemini-crunchtools",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
