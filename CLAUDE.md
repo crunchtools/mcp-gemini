@@ -229,6 +229,9 @@ uv run ruff check src tests
 # Type check
 uv run mypy src
 
+# Gourmand (AI slop detection)
+gourmand --full .
+
 # Build container
 podman build -t mcp-gemini .
 ```

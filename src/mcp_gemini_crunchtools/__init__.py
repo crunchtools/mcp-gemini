@@ -3,24 +3,15 @@
 A security-focused MCP server for Google Gemini AI capabilities
 including text, image, video, research, and more.
 
-Usage:
-    # Run directly
+Usage::
+
     mcp-gemini-crunchtools
-
-    # Or with Python module
     python -m mcp_gemini_crunchtools
-
-    # With uvx
     uvx mcp-gemini-crunchtools
 
 Environment Variables:
     GEMINI_API_KEY: Required. Google Gemini API key.
     GEMINI_OUTPUT_DIR: Optional. Directory for generated files.
-
-Example with Claude Code:
-    claude mcp add mcp-gemini-crunchtools \\
-        --env GEMINI_API_KEY=your_key_here \\
-        -- uvx mcp-gemini-crunchtools
 """
 
 import argparse
@@ -29,8 +20,10 @@ import sys
 
 from .server import mcp
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 __all__ = ["main", "mcp"]
+
+DEFAULT_HTTP_PORT = 8011
 
 
 def main() -> None:
@@ -60,8 +53,8 @@ def main() -> None:
     parser.add_argument(
         "--port",
         type=int,
-        default=8000,
-        help="Port to bind to for HTTP transports (default: 8000)",
+        default=DEFAULT_HTTP_PORT,
+        help="Port to bind to for HTTP transports (default: %(default)s)",
     )
     args = parser.parse_args()
 

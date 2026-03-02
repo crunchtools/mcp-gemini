@@ -31,7 +31,7 @@ FROM quay.io/hummingbird/python:latest
 
 # Labels for container metadata
 LABEL name="mcp-gemini-crunchtools" \
-      version="0.1.0" \
+      version="0.3.0" \
       summary="MCP server for Google Gemini AI" \
       description="A security-focused MCP server for Google Gemini AI built on Red Hat UBI" \
       maintainer="crunchtools.com" \
@@ -54,5 +54,5 @@ RUN python -c "from mcp_gemini_crunchtools import main; print('Installation veri
 
 # Default: stdio transport (use -i with podman run)
 # HTTP:    --transport streamable-http (use -d -p 8000:8000 with podman run)
-EXPOSE 8000
+EXPOSE 8011
 ENTRYPOINT ["python", "-m", "mcp_gemini_crunchtools"]

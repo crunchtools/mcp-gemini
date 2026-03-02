@@ -23,9 +23,8 @@ VALID_TEXT_MODELS = frozenset({
     "gemini-3-pro-preview", "gemini-3-flash-preview",
 })
 
-# Max file sizes
-MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024  # 20MB
-MAX_DOCUMENT_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
+MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024
+MAX_DOCUMENT_SIZE_BYTES = 100 * 1024 * 1024
 
 
 def validate_file_path(file_path: str) -> str:

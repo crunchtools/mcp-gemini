@@ -5,7 +5,6 @@ from typing import Any
 
 from ..client import get_client
 
-# In-memory research operation store
 _research_ops: dict[str, dict[str, Any]] = {}
 
 

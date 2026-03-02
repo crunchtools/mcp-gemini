@@ -46,7 +46,6 @@ async def gemini_speak(
         config=config,
     )
 
-    # Save audio to file
     audio_path = None
     if response.candidates:
         for part in response.candidates[0].content.parts:

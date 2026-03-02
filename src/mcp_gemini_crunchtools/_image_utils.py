@@ -12,7 +12,6 @@ def save_generated_image(
     image_data: bytes,
     output_dir: Path,
     prefix: str = "gemini",
-    _mime_type: str = "image/png",
 ) -> Path:
     """Save image bytes to disk, return the file path.
 
@@ -20,7 +19,6 @@ def save_generated_image(
         image_data: Raw image bytes.
         output_dir: Directory to save the image in.
         prefix: Filename prefix.
-        _mime_type: MIME type of the image data (unused, always saves as PNG).
 
     Returns:
         Path to the saved image file.
@@ -30,7 +28,6 @@ def save_generated_image(
     filename = f"{prefix}_{timestamp}_{unique_id}.png"
     output_path = output_dir / filename
 
-    # Use Pillow to validate and normalize to PNG
     img = Image.open(io.BytesIO(image_data))
     img.save(output_path, format="PNG")
 

@@ -34,7 +34,6 @@ async def gemini_analyze_document(
         msg = f"File too large ({file_size} bytes). Max: {MAX_DOCUMENT_SIZE_BYTES} bytes."
         raise ValueError(msg)
 
-    # Upload via Files API for large files, inline for small
     uploaded_file = client.upload_file(file_path)
     response = client.generate_content(
         model=model_name, contents=[question, uploaded_file],

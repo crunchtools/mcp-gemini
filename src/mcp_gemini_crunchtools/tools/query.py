@@ -6,8 +6,6 @@ from google.genai import types
 
 from ..client import get_client
 
-# Model name mapping
-# Using latest stable Gemini 2.5 models
 MODEL_MAP: dict[str, str] = {
     "pro": "gemini-2.5-pro",
     "flash": "gemini-2.5-flash",

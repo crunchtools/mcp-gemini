@@ -9,37 +9,25 @@ from typing import Any
 from fastmcp import FastMCP
 
 from .tools import (
-    # Query
     gemini_analyze_code,
-    # Document
     gemini_analyze_document,
-    # Image analysis
     gemini_analyze_image,
     gemini_analyze_text,
-    # URL
     gemini_analyze_url,
     gemini_brainstorm,
-    # Research
     gemini_check_research,
-    # Video
     gemini_check_video,
     gemini_compare_urls,
-    # Image editing
     gemini_continue_image_edit,
-    # Tokens
     gemini_count_tokens,
-    # Cache
     gemini_create_cache,
     gemini_deep_research,
     gemini_delete_cache,
-    # Voice
     gemini_dialogue,
     gemini_end_image_edit,
-    # Structured
     gemini_extract,
     gemini_extract_from_url,
     gemini_extract_tables,
-    # Image generation
     gemini_generate_image,
     gemini_generate_image_with_input,
     gemini_generate_video,
@@ -51,26 +39,22 @@ from .tools import (
     gemini_query,
     gemini_query_cache,
     gemini_research_followup,
-    # Code
     gemini_run_code,
-    # Search
     gemini_search,
     gemini_speak,
     gemini_start_image_edit,
     gemini_structured,
     gemini_summarize,
     gemini_summarize_pdf,
-    # YouTube
     gemini_youtube,
     gemini_youtube_summary,
 )
 
 logger = logging.getLogger(__name__)
 
-# Create the FastMCP server
 mcp = FastMCP(
     name="mcp-gemini-crunchtools",
-    version="0.1.1",
+    version="0.3.0",
     instructions=(
         "Secure MCP server for Google Gemini AI - text, image, video, research, and more. "
         "Generated files (images, audio, video) are saved to the output directory. "
@@ -84,12 +68,6 @@ mcp = FastMCP(
         "accessible at this same mount path when running as a container."
     ),
 )
-
-
-# ============================================================
-# Query Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_query_tool(
@@ -190,12 +168,6 @@ async def gemini_summarize_tool(
         content=content, format=format, length=length, model=model,
     )
 
-
-# ============================================================
-# Image Generation Tools
-# ============================================================
-
-
 @mcp.tool()
 async def gemini_generate_image_tool(
     prompt: str,
@@ -287,12 +259,6 @@ async def gemini_imagen_generate_tool(
         aspect_ratio=aspect_ratio,
     )
 
-
-# ============================================================
-# Image Editing Tools
-# ============================================================
-
-
 @mcp.tool()
 async def gemini_start_image_edit_tool(
     prompt: str,
@@ -349,12 +315,6 @@ async def gemini_list_image_sessions_tool() -> dict[str, Any]:
     """List all active image editing sessions."""
     return await gemini_list_image_sessions()
 
-
-# ============================================================
-# Image Analysis Tools
-# ============================================================
-
-
 @mcp.tool()
 async def gemini_analyze_image_tool(
     image_path: str,
@@ -372,12 +332,6 @@ async def gemini_analyze_image_tool(
         image_path=image_path, query=query, model=model,
     )
 
-
-# ============================================================
-# Search Tools
-# ============================================================
-
-
 @mcp.tool()
 async def gemini_search_tool(
     query: str,
@@ -390,12 +344,6 @@ async def gemini_search_tool(
         model: Model to use.
     """
     return await gemini_search(query=query, model=model)
-
-
-# ============================================================
-# Document Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_analyze_document_tool(
@@ -449,12 +397,6 @@ async def gemini_extract_tables_tool(
     return await gemini_extract_tables(
         file_path=file_path, output_format=output_format, model=model,
     )
-
-
-# ============================================================
-# URL Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_analyze_url_tool(
@@ -517,12 +459,6 @@ async def gemini_extract_from_url_tool(
         custom_fields=custom_fields, model=model,
     )
 
-
-# ============================================================
-# Video Tools
-# ============================================================
-
-
 @mcp.tool()
 async def gemini_generate_video_tool(
     prompt: str,
@@ -552,12 +488,6 @@ async def gemini_check_video_tool(
         operation_name: The operation name from gemini_generate_video.
     """
     return await gemini_check_video(operation_name=operation_name)
-
-
-# ============================================================
-# YouTube Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_youtube_tool(
@@ -589,12 +519,6 @@ async def gemini_youtube_summary_tool(
         model: Model to use.
     """
     return await gemini_youtube_summary(url=url, style=style, model=model)
-
-
-# ============================================================
-# Voice Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_speak_tool(
@@ -630,12 +554,6 @@ async def gemini_dialogue_tool(
 async def gemini_list_voices_tool() -> dict[str, Any]:
     """List available voices for text-to-speech."""
     return await gemini_list_voices()
-
-
-# ============================================================
-# Research Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_deep_research_tool(
@@ -677,12 +595,6 @@ async def gemini_research_followup_tool(
     return await gemini_research_followup(
         research_id=research_id, question=question,
     )
-
-
-# ============================================================
-# Cache Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_create_cache_tool(
@@ -746,12 +658,6 @@ async def gemini_delete_cache_tool(
     """
     return await gemini_delete_cache(cache_name=cache_name)
 
-
-# ============================================================
-# Structured Output Tools
-# ============================================================
-
-
 @mcp.tool()
 async def gemini_structured_tool(
     prompt: str,
@@ -793,12 +699,6 @@ async def gemini_extract_tool(
         custom_fields=custom_fields, model=model,
     )
 
-
-# ============================================================
-# Token Tools
-# ============================================================
-
-
 @mcp.tool()
 async def gemini_count_tokens_tool(
     content: str,
@@ -811,12 +711,6 @@ async def gemini_count_tokens_tool(
         model: Model to count tokens for.
     """
     return await gemini_count_tokens(content=content, model=model)
-
-
-# ============================================================
-# Code Execution Tools
-# ============================================================
-
 
 @mcp.tool()
 async def gemini_run_code_tool(

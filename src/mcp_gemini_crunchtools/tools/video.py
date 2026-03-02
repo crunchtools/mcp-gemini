@@ -54,9 +54,8 @@ async def gemini_check_video(
     """
     client = get_client()
 
-    operation = client.client.operations.get_videos_operation(  # type: ignore[attr-defined]
-        name=operation_name,
-    )
+    operations: Any = client.client.operations
+    operation = operations.get_videos_operation(name=operation_name)
 
     if operation.done:
         video_path = None

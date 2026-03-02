@@ -16,9 +16,8 @@ from ..client import get_client
 from ..errors import SessionNotFoundError
 from ..models import validate_file_exists
 
-# In-memory session store
 _sessions: dict[str, dict[str, Any]] = {}
-SESSION_TIMEOUT_SECONDS = 3600  # 1 hour
+SESSION_TIMEOUT_SECONDS = 3600
 
 
 def _cleanup_stale_sessions() -> None:
@@ -64,7 +63,6 @@ async def gemini_start_image_edit(
     config = types.GenerateContentConfig(**config_kwargs)
     chat = client.create_chat(model="gemini-2.5-flash-image", config=config)
 
-    # Build initial message
     contents: list[Any] = [prompt]
     if file_path:
         file_path = validate_file_exists(file_path)

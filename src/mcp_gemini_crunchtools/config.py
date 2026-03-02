@@ -35,10 +35,8 @@ class Config:
                 "Get one at https://aistudio.google.com/apikey"
             )
 
-        # Store as SecretStr to prevent accidental logging
         self._api_key = SecretStr(api_key)
 
-        # Output directory for generated images/audio/video
         self._output_dir = Path(
             os.environ.get(
                 "GEMINI_OUTPUT_DIR",
@@ -71,7 +69,6 @@ class Config:
         return self.__repr__()
 
 
-# Global configuration instance - initialized on first use
 _config: Config | None = None
 
 

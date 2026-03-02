@@ -1,0 +1,74 @@
+name: Feature Request
+description: Suggest a new tool or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+      placeholder: I need to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the tool or change you'd like
+      placeholder: |
+        Tool name: `gemini_do_something`
+        Google Gemini API method: `generate_content` / etc.
+        Parameters: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternatives have you considered?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Tool Category
+      description: Which area does this feature belong to?
+      options:
+        - Query
+        - Image Generation
+        - Image Editing
+        - Image Analysis
+        - Search
+        - Document
+        - URL
+        - Video
+        - YouTube
+        - Voice
+        - Research
+        - Cache
+        - Structured Output
+        - Tokens
+        - Code Execution
+        - New Category
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gemini_api
+    attributes:
+      label: Google Gemini API Reference
+      description: Does this correspond to an existing Google Gemini API capability?
+      options:
+        - "Yes - documented in Google AI docs"
+        - "No - new behavior / aggregation"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, API docs links, or examples

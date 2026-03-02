@@ -166,7 +166,6 @@ def _handle_genai_error(e: Exception) -> None:
     raise GeminiApiError(error_msg) from e
 
 
-# Global client instance
 _client: GeminiClient | None = None
 
 
