@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 # Create the FastMCP server
 mcp = FastMCP(
     name="mcp-gemini-crunchtools",
-    version="0.1.0",
+    version="0.1.1",
     instructions=(
         "Secure MCP server for Google Gemini AI - text, image, video, research, and more. "
         "Generated files (images, audio, video) are saved to the output directory. "
