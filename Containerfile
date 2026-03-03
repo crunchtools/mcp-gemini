@@ -37,7 +37,10 @@ LABEL name="mcp-gemini-crunchtools" \
       maintainer="crunchtools.com" \
       url="https://github.com/crunchtools/mcp-gemini" \
       io.k8s.display-name="MCP Gemini CrunchTools" \
-      io.openshift.tags="mcp,gemini,ai,imagen"
+      io.openshift.tags="mcp,gemini,ai,imagen" \
+      org.opencontainers.image.source="https://github.com/crunchtools/mcp-gemini" \
+      org.opencontainers.image.description="MCP server for Google Gemini AI" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 # Set working directory
 WORKDIR /app
