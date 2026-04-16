@@ -159,7 +159,7 @@ podman run -v ~/.local/share/mcp-uploads-downloads:/output:z \
    - **IMPORTANT: Copy the API key immediately** - store it securely!
    - The key starts with `AI...` (e.g., `AIzaSy...`)
 
-### Add to Claude Code
+### Add to Claude Code (quick start)
 
 ```bash
 claude mcp add mcp-gemini-crunchtools \
@@ -167,10 +167,40 @@ claude mcp add mcp-gemini-crunchtools \
     -- uvx mcp-gemini-crunchtools
 ```
 
-Or for the container version:
+### Secure credential storage (recommended)
+
+Store your API key in a file with restricted permissions instead of passing it
+as an environment variable (which is stored in plaintext in Claude's config JSON):
 
 ```bash
-# Create a shared output directory (required before first run)
+mkdir -p ~/.config/mcp-gemini && chmod 700 ~/.config/mcp-gemini
+echo "your_api_key_here" > ~/.config/mcp-gemini/api-key
+chmod 600 ~/.config/mcp-gemini/api-key
+
+claude mcp add mcp-gemini-crunchtools \
+    --env GEMINI_API_KEY_FILE=$HOME/.config/mcp-gemini/api-key \
+    -- uvx mcp-gemini-crunchtools
+```
+
+For the container version, mount the key file as a read-only secret:
+
+```bash
+mkdir -p ~/.local/share/mcp-uploads-downloads
+
+claude mcp add mcp-gemini-crunchtools \
+    --env GEMINI_API_KEY_FILE=/run/secrets/api-key \
+    --env GEMINI_OUTPUT_DIR=/output \
+    -- podman run -i --rm \
+        -v ~/.config/mcp-gemini/api-key:/run/secrets/api-key:ro,z \
+        -v ~/.local/share/mcp-uploads-downloads:/output:z \
+        -e GEMINI_API_KEY_FILE=/run/secrets/api-key \
+        -e GEMINI_OUTPUT_DIR=/output \
+        quay.io/crunchtools/mcp-gemini
+```
+
+### Container with env var (quick start)
+
+```bash
 mkdir -p ~/.local/share/mcp-uploads-downloads
 
 claude mcp add mcp-gemini-crunchtools \
@@ -189,7 +219,7 @@ For generated images, audio, and videos when running without a container:
 
 ```bash
 claude mcp add mcp-gemini-crunchtools \
-    --env GEMINI_API_KEY=your_api_key_here \
+    --env GEMINI_API_KEY_FILE=$HOME/.config/mcp-gemini/api-key \
     --env GEMINI_OUTPUT_DIR=$HOME/.local/share/mcp-uploads-downloads \
     -- uvx mcp-gemini-crunchtools
 ```
@@ -252,7 +282,8 @@ This server was designed with security as a primary concern. See [SECURITY.md](S
 
 1. **API Key Protection**
    - Stored as SecretStr (never accidentally logged)
-   - Environment variable only (never in files or args)
+   - Supports file-based loading via `GEMINI_API_KEY_FILE` (recommended)
+   - Falls back to `GEMINI_API_KEY` env var for quick start
    - Sanitized from all error messages
 
 2. **Input Validation**
