@@ -30,9 +30,20 @@ class Config:
         """
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
+            key_file = os.environ.get("GEMINI_API_KEY_FILE")
+            if key_file:
+                key_path = Path(key_file).expanduser()
+                if key_path.is_file():
+                    api_key = key_path.read_text().strip()
+                    logger.info(f"Loaded API key from {key_path}")
+                else:
+                    raise ConfigurationError(
+                        f"GEMINI_API_KEY_FILE points to missing file: {key_file}"
+                    )
+        if not api_key:
             raise ConfigurationError(
-                "GEMINI_API_KEY environment variable required. "
-                "Get one at https://aistudio.google.com/apikey"
+                "GEMINI_API_KEY or GEMINI_API_KEY_FILE environment variable required. "
+                "Get a key at https://aistudio.google.com/apikey"
             )
 
         self._api_key = SecretStr(api_key)

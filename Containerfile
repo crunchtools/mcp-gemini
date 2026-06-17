@@ -15,8 +15,21 @@
 #     -e GEMINI_OUTPUT_DIR=/output \
 #     quay.io/crunchtools/mcp-gemini
 #
-# With Claude Code:
+# With Claude Code (secure — mount key file as read-only secret):
+#   mkdir -p ~/.config/mcp-gemini && chmod 700 ~/.config/mcp-gemini
+#   echo "your_key" > ~/.config/mcp-gemini/api-key && chmod 600 ~/.config/mcp-gemini/api-key
 #   mkdir -p ~/.local/share/mcp-uploads-downloads
+#   claude mcp add mcp-gemini-crunchtools \
+#     --env GEMINI_API_KEY_FILE=/run/secrets/api-key \
+#     --env GEMINI_OUTPUT_DIR=/output \
+#     -- podman run -i --rm \
+#       -v ~/.config/mcp-gemini/api-key:/run/secrets/api-key:ro,z \
+#       -v ~/.local/share/mcp-uploads-downloads:/output:z \
+#       -e GEMINI_API_KEY_FILE=/run/secrets/api-key \
+#       -e GEMINI_OUTPUT_DIR=/output \
+#       quay.io/crunchtools/mcp-gemini
+#
+# With Claude Code (quick — env var, stored in plaintext in config):
 #   claude mcp add mcp-gemini-crunchtools \
 #     --env GEMINI_API_KEY=your_key \
 #     --env GEMINI_OUTPUT_DIR=/output \
