@@ -2,3 +2,23 @@
 check = "summary_litter"
 path = "CLAUDE.md"
 justification = "Claude Code project instructions for AI assistant orientation"
+
+[[exceptions]]
+check = "over_abstraction"
+path = "src/mcp_gemini_crunchtools/client.py"
+justification = "create_chat is a named seam over the SDK's chat constructor. It is where the model, system instruction and safety settings are applied; callers should not be assembling those."
+
+[[exceptions]]
+check = "over_abstraction"
+path = "src/mcp_gemini_crunchtools/tools/query.py"
+justification = "_resolve_model maps a caller's model hint onto a configured model name. Thin today because the mapping is currently one lookup, but it is the single place that decision is made."
+
+[[exceptions]]
+check = "copy_paste_detection"
+path = "src/mcp_gemini_crunchtools/models.py"
+justification = "validate_aspect_ratio and validate_image_size check different value sets against different error messages. They share the membership-test-and-raise shape common to every validator in the fleet."
+
+[[exceptions]]
+check = "copy_paste_detection"
+path = "src/mcp_gemini_crunchtools/client.py"
+justification = "get_client and get_config are both the four-line lazy-singleton accessor: check the module global, construct if None, return. The duplication is the idiom; hiding it behind a generic obscures which global is being initialised."
