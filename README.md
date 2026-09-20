@@ -6,7 +6,7 @@ A secure MCP (Model Context Protocol) server for Google Gemini AI - text, image,
 
 This MCP server is designed to be:
 
-- **Secure by default** - Comprehensive threat modeling, input validation, and API key protection
+- **Secure by default** - STRIDE threat model (see [SECURITY.md](SECURITY.md)), Pydantic input validation, and the API key held as a `SecretStr` to prevent accidental logging
 - **No third-party services** - Runs locally via stdio, your API key never leaves your machine
 - **Cross-platform** - Works on Linux, macOS, and Windows
 - **Automatically updated** - GitHub Actions monitor for CVEs and update dependencies

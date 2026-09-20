@@ -1,24 +1,36 @@
-[[exceptions]]
-check = "summary_litter"
-path = "CLAUDE.md"
-justification = "Claude Code project instructions for AI assistant orientation"
 
 [[exceptions]]
-check = "over_abstraction"
+check = "CH010-over_abstraction"
 path = "src/mcp_gemini_crunchtools/client.py"
 justification = "create_chat is a named seam over the SDK's chat constructor. It is where the model, system instruction and safety settings are applied; callers should not be assembling those."
+classification = "by_design"
 
 [[exceptions]]
-check = "over_abstraction"
+check = "CH010-over_abstraction"
 path = "src/mcp_gemini_crunchtools/tools/query.py"
 justification = "_resolve_model maps a caller's model hint onto a configured model name. Thin today because the mapping is currently one lookup, but it is the single place that decision is made."
+classification = "by_design"
 
 [[exceptions]]
-check = "copy_paste_detection"
+check = "CH012-copy_paste_detection"
 path = "src/mcp_gemini_crunchtools/models.py"
 justification = "validate_aspect_ratio and validate_image_size check different value sets against different error messages. They share the membership-test-and-raise shape common to every validator in the fleet."
+classification = "by_design"
 
 [[exceptions]]
-check = "copy_paste_detection"
+check = "CH012-copy_paste_detection"
 path = "src/mcp_gemini_crunchtools/client.py"
 justification = "get_client and get_config are both the four-line lazy-singleton accessor: check the module global, construct if None, return. The duplication is the idiom; hiding it behind a generic obscures which global is being initialised."
+classification = "by_design"
+
+[[exceptions]]
+check = "EV013-hidden_env_config"
+path = "src/mcp_gemini_crunchtools/config.py"
+justification = "GEMINI_OUTPUT_DIR is a real, intentional, user-facing setting -- confirmed against the source (config.py: `os.environ.get(\"GEMINI_OUTPUT_DIR\", \"~/.config/mcp-gemini-crunchtools/output\")`, default verified, not copied from a docstring). It is documented in README.md under '### Optional: Set Output Directory (non-container)' and in CLAUDE.md under '## Output Files', both naming the variable, its default, and how to override it. GEMINI_API_KEY is not flagged because it already matches the check's own `*_API_KEY` allowlist pattern."
+classification = "by_design"
+
+[[exceptions]]
+check = "EV002-manifest_lint_suppression"
+path = "pyproject.toml"
+justification = "Each remaining global ruff ignore was verified against this codebase with `uv run ruff check --select <RULE>` (the project's own pinned toolchain, not a system-wide ruff, since rule behavior differs by version -- PLR0917 requires ruff's stable, non-preview support) before being kept: TRY003 (4 hits in src/, pCloud-equivalent long Gemini API error messages), PLR0913/PLR0917 (2 hits each in src/, MCP tool signatures mirror the wire API and genuinely take many named/positional parameters), PLW0603 (2 hits, module-level lazy singletons for config/client), PLC0415 (1 hit in src/ avoiding a circular import, plus 58 hits across tests/ -- the suite's deliberate pattern of importing the function under test inside the test body so @patch lands first), TID252 (29 hits, this package's own internal relative imports). Three previously-global entries with zero hits anywhere in the actual codebase (PIE790, RUF022, S105) were either fixed outright (PIE790: removed 7 redundant `pass` statements from exception classes with `ruff check --fix`) or dropped as dead config (RUF022, S105 -- this repo has no env-var-name constants that read as hardcoded passwords). S101 (assert, tests only) and PLR2004 (magic numbers in test assertions, tests only) were moved from the global ignore into `[tool.ruff.lint.per-file-ignores]` for tests/* instead of staying global, narrowing scope to where they are actually used."
+classification = "by_design"
