@@ -4,6 +4,7 @@ Every tool gets at least one test with mocked google-genai SDK calls.
 No live API calls, no API keys required.
 """
 
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,6 +27,7 @@ async def test_tool_count() -> None:
         f"Expected {EXPECTED_TOOL_COUNT} tools, found {len(tools)}. "
         f"Tools: {sorted(t.name for t in tools)}"
     )
+
 
 class TestQueryTools:
     """Tests for query, brainstorm, analyze_code, analyze_text, summarize."""
@@ -90,6 +92,7 @@ class TestQueryTools:
         assert result["response"] == "summary"
         assert result["format"] == "bullets"
 
+
 class TestImageGenTools:
     """Tests for generate_image, generate_image_with_input, image_prompt, imagen_generate."""
 
@@ -147,6 +150,7 @@ class TestImageGenTools:
         assert result["count"] == 1
         assert result["model"] == "imagen-4.0-generate-001"
 
+
 class TestImageEditTools:
     """Tests for start, continue, end, list_sessions."""
 
@@ -187,8 +191,6 @@ class TestImageEditTools:
         mock_extract_text: MagicMock,
         mock_save: MagicMock,
     ) -> None:
-        import time
-
         from mcp_gemini_crunchtools.tools.image_edit import (
             _sessions,
             gemini_continue_image_edit,
@@ -212,8 +214,6 @@ class TestImageEditTools:
         assert result["turn_count"] == 2
 
     async def test_end_image_edit(self) -> None:
-        import time
-
         from mcp_gemini_crunchtools.tools.image_edit import (
             _sessions,
             gemini_end_image_edit,
@@ -246,6 +246,7 @@ class TestImageEditTools:
         assert result["count"] == 0
         assert result["sessions"] == []
 
+
 class TestImageAnalysisTools:
     """Tests for analyze_image."""
 
@@ -269,6 +270,7 @@ class TestImageAnalysisTools:
         result = await gemini_analyze_image(image_path="/fake/image.png")
         assert result["response"] == "a photo of a cat"
 
+
 class TestSearchTools:
     """Tests for search."""
 
@@ -283,6 +285,7 @@ class TestSearchTools:
         result = await gemini_search(query="python containers")
         assert result["response"] == "search results"
         assert result["query"] == "python containers"
+
 
 class TestDocumentTools:
     """Tests for analyze_document, summarize_pdf, extract_tables."""
@@ -347,6 +350,7 @@ class TestDocumentTools:
         result = await gemini_extract_tables(file_path="/fake/doc.pdf")
         assert "response" in result
 
+
 class TestUrlTools:
     """Tests for analyze_url, compare_urls, extract_from_url."""
 
@@ -370,9 +374,7 @@ class TestUrlTools:
         mock_client.generate_content.return_value = mock_generate_response("comparison")
         mock_get_client.return_value = mock_client
 
-        result = await gemini_compare_urls(
-            url1="https://example.com", url2="https://other.com"
-        )
+        result = await gemini_compare_urls(url1="https://example.com", url2="https://other.com")
         assert result["response"] == "comparison"
 
     @patch("mcp_gemini_crunchtools.tools.url.get_client")
@@ -385,6 +387,7 @@ class TestUrlTools:
 
         result = await gemini_extract_from_url(url="https://example.com", data_type="links")
         assert result["response"] == "extracted data"
+
 
 class TestVideoTools:
     """Tests for generate_video, check_video."""
@@ -432,6 +435,7 @@ class TestVideoTools:
         result = await gemini_check_video(operation_name="op-456")
         assert result["status"] == "in_progress"
 
+
 class TestYouTubeTools:
     """Tests for youtube, youtube_summary."""
 
@@ -459,6 +463,7 @@ class TestYouTubeTools:
             url="https://youtube.com/watch?v=test123", style="detailed"
         )
         assert result["response"] == "video summary"
+
 
 class TestVoiceTools:
     """Tests for speak, dialogue, list_voices."""
@@ -493,6 +498,7 @@ class TestVoiceTools:
         assert "voices" in result
         assert "Kore" in result["voices"]
         assert len(result["voices"]) == 8
+
 
 class TestResearchTools:
     """Tests for deep_research, check_research, research_followup."""
@@ -551,10 +557,9 @@ class TestResearchTools:
             "started": 0,
         }
 
-        result = await gemini_research_followup(
-            research_id="followup-op", question="tell me more"
-        )
+        result = await gemini_research_followup(research_id="followup-op", question="tell me more")
         assert result["response"] == "followup answer"
+
 
 class TestCacheTools:
     """Tests for create_cache, query_cache, list_caches, delete_cache."""
@@ -606,6 +611,7 @@ class TestCacheTools:
         result = await gemini_delete_cache(cache_name="caches/abc")
         assert result["status"] == "deleted"
 
+
 class TestStructuredTools:
     """Tests for structured, extract."""
 
@@ -631,6 +637,7 @@ class TestStructuredTools:
         result = await gemini_extract(text="John works at Acme", extract_type="entities")
         assert "response" in result
 
+
 class TestTokenTools:
     """Tests for count_tokens."""
 
@@ -646,6 +653,7 @@ class TestTokenTools:
 
         result = await gemini_count_tokens(content="some text to count")
         assert result["total_tokens"] == 42
+
 
 class TestCodeTools:
     """Tests for run_code."""

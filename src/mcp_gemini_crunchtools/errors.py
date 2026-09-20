@@ -14,13 +14,9 @@ class UserError(Exception):
     to avoid leaking sensitive information like API keys or internal paths.
     """
 
-    pass
-
 
 class ConfigurationError(UserError):
     """Error in server configuration."""
-
-    pass
 
 
 class GeminiApiError(UserError):
@@ -37,8 +33,6 @@ class GeminiApiError(UserError):
 
 class ImageGenerationError(UserError):
     """Error during image generation."""
-
-    pass
 
 
 class ImageTooLargeError(UserError):
@@ -80,22 +74,14 @@ class RateLimitError(UserError):
 class ValidationError(UserError):
     """Input validation error."""
 
-    pass
-
 
 class VideoGenerationError(UserError):
     """Error during video generation."""
-
-    pass
 
 
 class ResearchError(UserError):
     """Error during deep research."""
 
-    pass
-
 
 class CacheError(UserError):
     """Error with content caching."""
-
-    pass

@@ -4,6 +4,8 @@ Provides singleton reset and mock helpers for google-genai SDK.
 """
 
 import os
+import tempfile
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -119,9 +121,6 @@ def mock_gemini_client(**overrides: Any) -> MagicMock:
     Returns:
         A MagicMock mimicking GeminiClient with default behaviors.
     """
-    import tempfile
-    from pathlib import Path
-
     mock_client = MagicMock()
     mock_client.generate_content.return_value = mock_generate_response()
     mock_client.generate_images.return_value = None
