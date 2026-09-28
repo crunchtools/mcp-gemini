@@ -1,6 +1,5 @@
 """Content caching tools."""
 
-import asyncio
 from typing import Any
 
 from google.genai import types
@@ -48,18 +47,15 @@ async def gemini_create_cache(
         msg = "Either file_path or content must be provided."
         raise ValueError(msg)
 
-    cache_config: dict[str, Any] = {
-        "model": model_name,
-        "contents": contents,
-        "config": types.CreateCachedContentConfig(
-            display_name=display_name,
-            ttl=f"{ttl_minutes * 60}s",
-        ),
-    }
-    if system_instruction:
-        cache_config["config"].system_instruction = system_instruction
-
-    cache = await asyncio.to_thread(client.client.caches.create, **cache_config)
+    # The SDK takes the cached contents inside the config; passing them as
+    # their own argument raised TypeError on every call.
+    config = types.CreateCachedContentConfig(
+        contents=contents,
+        display_name=display_name,
+        ttl=f"{ttl_minutes * 60}s",
+        system_instruction=system_instruction,
+    )
+    cache = await client.create_cache(model=model_name, config=config)
 
     return {
         "cache_name": cache.name,
@@ -107,7 +103,7 @@ async def gemini_list_caches() -> dict[str, Any]:
         List of active caches.
     """
     client = get_client()
-    caches_list = await asyncio.to_thread(lambda: list(client.client.caches.list()))
+    caches_list = await client.list_caches()
 
     result = []
     for cache in caches_list:
@@ -136,6 +132,6 @@ async def gemini_delete_cache(
         Deletion confirmation.
     """
     client = get_client()
-    await asyncio.to_thread(client.client.caches.delete, name=cache_name)
+    await client.delete_cache(cache_name)
 
     return {"cache_name": cache_name, "status": "deleted"}

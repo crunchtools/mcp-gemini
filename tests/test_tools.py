@@ -402,7 +402,7 @@ class TestVideoTools:
         mock_client = mock_gemini_client()
         mock_op = MagicMock()
         mock_op.name = "operations/video-123"
-        mock_client.client.models.generate_videos.return_value = mock_op
+        mock_client.generate_videos.return_value = mock_op
         mock_get_client.return_value = mock_client
 
         result = await gemini_generate_video(prompt="a sunset timelapse")
@@ -419,7 +419,7 @@ class TestVideoTools:
         mock_video = MagicMock()
         mock_video.video.uri = "gs://bucket/video.mp4"
         mock_op.response.generated_videos = [mock_video]
-        mock_client.client.operations.get_videos_operation.return_value = mock_op
+        mock_client.get_videos_operation.return_value = mock_op
         mock_get_client.return_value = mock_client
 
         result = await gemini_check_video(operation_name="op-123")
@@ -432,7 +432,7 @@ class TestVideoTools:
         mock_client = mock_gemini_client()
         mock_op = MagicMock()
         mock_op.done = False
-        mock_client.client.operations.get_videos_operation.return_value = mock_op
+        mock_client.get_videos_operation.return_value = mock_op
         mock_get_client.return_value = mock_client
 
         result = await gemini_check_video(operation_name="op-456")
@@ -574,7 +574,7 @@ class TestCacheTools:
         mock_client = mock_gemini_client()
         mock_cache = MagicMock()
         mock_cache.name = "caches/abc123"
-        mock_client.client.caches.create.return_value = mock_cache
+        mock_client.create_cache.return_value = mock_cache
         mock_get_client.return_value = mock_client
 
         result = await gemini_create_cache(content="test content", display_name="test-cache")
@@ -597,7 +597,7 @@ class TestCacheTools:
         from mcp_gemini_crunchtools.tools.cache import gemini_list_caches
 
         mock_client = mock_gemini_client()
-        mock_client.client.caches.list.return_value = []
+        mock_client.list_caches.return_value = []
         mock_get_client.return_value = mock_client
 
         result = await gemini_list_caches()

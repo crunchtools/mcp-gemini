@@ -46,6 +46,8 @@ async def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
     except BaseException:
         lock.release()
         raise
+    # shield marks the worker's error retrieved if the caller is cancelled,
+    # so an abandoned turn that fails is not reported as never retrieved.
     turn.add_done_callback(lambda _: lock.release())
     return await asyncio.shield(turn)
 

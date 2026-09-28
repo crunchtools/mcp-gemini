@@ -122,7 +122,17 @@ def mock_gemini_client(**overrides: Any) -> MagicMock:
         A MagicMock mimicking GeminiClient with default behaviors.
     """
     mock_client = MagicMock()
-    for method in ("generate_content", "generate_images", "upload_file", "count_tokens"):
+    for method in (
+        "generate_content",
+        "generate_images",
+        "upload_file",
+        "count_tokens",
+        "create_cache",
+        "list_caches",
+        "delete_cache",
+        "generate_videos",
+        "get_videos_operation",
+    ):
         setattr(mock_client, method, AsyncMock())
     mock_client.generate_content.return_value = mock_generate_response()
     mock_client.generate_images.return_value = None
@@ -133,10 +143,10 @@ def mock_gemini_client(**overrides: Any) -> MagicMock:
     mock_client.output_dir = Path(tempfile.mkdtemp())
 
     mock_client.client = MagicMock()
-    mock_client.client.caches.create.return_value = MagicMock(name="test-cache")
-    mock_client.client.caches.list.return_value = []
-    mock_client.client.caches.delete.return_value = None
-    mock_client.client.models.generate_videos.return_value = MagicMock(name="op-123")
+    mock_client.create_cache.return_value = MagicMock(name="test-cache")
+    mock_client.list_caches.return_value = []
+    mock_client.delete_cache.return_value = None
+    mock_client.generate_videos.return_value = MagicMock(name="op-123")
 
     for attr, value in overrides.items():
         setattr(mock_client, attr, value)

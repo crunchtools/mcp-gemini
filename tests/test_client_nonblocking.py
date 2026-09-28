@@ -5,10 +5,11 @@ generation froze the server for every other caller, down to ``initialize``.
 """
 
 import asyncio
+import gc
 import threading
 import time
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -26,24 +27,38 @@ SDK_PATHS = {
     "generate_images": ("models", "generate_images"),
     "count_tokens": ("models", "count_tokens"),
     "upload_file": ("files", "upload"),
+    "create_cache": ("caches", "create"),
+    "list_caches": ("caches", "list"),
+    "delete_cache": ("caches", "delete"),
+    "generate_videos": ("models", "generate_videos"),
+    "get_videos_operation": ("operations", "get_videos_operation"),
 }
 CALL_ARGS: dict[str, dict[str, Any]] = {
-    "generate_content": {"model": "m", "contents": ["x"]},
-    "generate_images": {"model": "m", "prompt": "x"},
+    "generate_content": {"model": "m", "contents": ["x"], "config": None},
+    "generate_images": {"model": "m", "prompt": "x", "config": None},
     "count_tokens": {"model": "m", "contents": ["x"]},
     "upload_file": {"file_path": "doc.pdf"},
+    "create_cache": {"model": "m", "config": None},
+    "list_caches": {},
+    "delete_cache": {"name": "caches/x"},
+    "generate_videos": {"model": "m", "prompt": "x"},
+    "get_videos_operation": {"name": "operations/x"},
 }
+
+# Where a wrapper renames an argument on its way to the SDK.
+SDK_KWARGS: dict[str, dict[str, Any]] = {"upload_file": {"file": "doc.pdf"}}
 
 
 @pytest.mark.parametrize("method", sorted(SDK_PATHS))
 async def test_slow_sdk_call_leaves_loop_responsive(method: str) -> None:
     client = GeminiClient()
-    received: dict[str, Any] = {}
+    calls: list[dict[str, Any]] = []
+    result = ["done"]
 
-    def slow_sdk(**kwargs: Any) -> str:
-        received.update(kwargs)
+    def slow_sdk(**kwargs: Any) -> list[str]:
+        calls.append(kwargs)
         time.sleep(0.5)
-        return "done"
+        return result
 
     group, name = SDK_PATHS[method]
     setattr(getattr(client.client, group), name, slow_sdk)
@@ -53,9 +68,11 @@ async def test_slow_sdk_call_leaves_loop_responsive(method: str) -> None:
     await asyncio.sleep(0.05)
     ticked_at = time.monotonic() - started
 
-    assert await call == "done"
+    returned = await call
     assert ticked_at < 0.3
-    assert received
+    assert calls == [SDK_KWARGS.get(method, CALL_ARGS[method])]
+    if method != "delete_cache":
+        assert returned == result
 
 
 def test_sdk_client_carries_timeout_and_size_limit() -> None:
@@ -101,7 +118,7 @@ async def test_oversized_cache_upload_is_refused_before_upload(tmp_path: Any) ->
     ):
         await gemini_create_cache(display_name="d", file_path=str(big))
     client.upload_file.assert_not_called()
-    client.client.caches.create.assert_not_called()
+    client.create_cache.assert_not_called()
 
 
 async def test_turns_in_one_edit_session_do_not_overlap() -> None:
@@ -167,3 +184,75 @@ async def test_cancelled_turn_holds_the_session_until_its_worker_finishes() -> N
     await second
     assert order == ["a", "b"]
     assert first.cancelled()
+
+
+async def test_list_caches_drains_the_paging_iterator() -> None:
+    client = GeminiClient()
+    client.client.caches.list = lambda: (f"cache-{n}" for n in range(3))
+    assert await client.list_caches() == ["cache-0", "cache-1", "cache-2"]
+
+
+async def test_abandoned_turn_that_fails_releases_the_session() -> None:
+    from mcp_gemini_crunchtools.tools import image_edit
+
+    running = threading.Event()
+    release = threading.Event()
+
+    def send_message(contents: list[str]) -> MagicMock:
+        if contents == ["a"]:
+            running.set()
+            release.wait(5)
+            raise RuntimeError("upstream failed")
+        return MagicMock(candidates=[])
+
+    lock = asyncio.Lock()
+    image_edit._sessions["edit-z"] = {
+        "chat": MagicMock(send_message=send_message),
+        "lock": lock,
+        "last_active": time.time(),
+        "turn_count": 1,
+        "images": [],
+    }
+    unretrieved: list[Any] = []
+    asyncio.get_running_loop().set_exception_handler(lambda _, ctx: unretrieved.append(ctx))
+
+    first = asyncio.create_task(image_edit.gemini_continue_image_edit("edit-z", "a"))
+    await asyncio.to_thread(running.wait, 5)
+    first.cancel()
+    release.set()
+
+    await image_edit.gemini_continue_image_edit("edit-z", "b")
+    assert not lock.locked()
+    gc.collect()
+    await asyncio.sleep(0)
+    assert unretrieved == []
+
+
+async def test_failed_turn_reaches_its_awaiter() -> None:
+    from mcp_gemini_crunchtools.tools import image_edit
+
+    def send_message(_: list[str]) -> MagicMock:
+        raise RuntimeError("upstream failed")
+
+    lock = asyncio.Lock()
+    image_edit._sessions["edit-w"] = {
+        "chat": MagicMock(send_message=send_message),
+        "lock": lock,
+        "last_active": time.time(),
+        "turn_count": 1,
+        "images": [],
+    }
+    with pytest.raises(RuntimeError, match="upstream failed"):
+        await image_edit.gemini_continue_image_edit("edit-w", "a")
+    assert not lock.locked()
+
+
+async def test_create_cache_puts_contents_in_the_config() -> None:
+    from mcp_gemini_crunchtools.tools.cache import gemini_create_cache
+
+    client = MagicMock(create_cache=AsyncMock(return_value=MagicMock()))
+    with patch("mcp_gemini_crunchtools.tools.cache.get_client", return_value=client):
+        await gemini_create_cache(content="cache me", system_instruction="be brief")
+    config = client.create_cache.await_args.kwargs["config"]
+    assert config.contents
+    assert config.system_instruction

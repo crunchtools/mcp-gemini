@@ -201,6 +201,73 @@ class GeminiClient:
         except Exception as e:
             _handle_genai_error(e)
 
+    async def create_cache(self, model: str, config: types.CreateCachedContentConfig) -> Any:
+        """Create a content cache.
+
+        Args:
+            model: Model the cache is bound to.
+            config: The contents to cache, plus display name, TTL and
+                system instruction.
+
+        Returns:
+            The SDK's CachedContent; its ``name`` identifies the cache.
+
+        Raises:
+            GeminiApiError: On API errors.
+        """
+        try:
+            return await asyncio.to_thread(self._client.caches.create, model=model, config=config)
+        except Exception as e:
+            _handle_genai_error(e)
+
+    async def list_caches(self) -> list[Any]:
+        """List content caches, paging through the SDK iterator in the worker.
+
+        Raises:
+            GeminiApiError: On API errors.
+        """
+        try:
+            return await asyncio.to_thread(lambda: list(self._client.caches.list()))
+        except Exception as e:
+            _handle_genai_error(e)
+            raise
+
+    async def delete_cache(self, name: str) -> None:
+        """Delete a content cache.
+
+        Raises:
+            GeminiApiError: On API errors.
+        """
+        try:
+            await asyncio.to_thread(self._client.caches.delete, name=name)
+        except Exception as e:
+            _handle_genai_error(e)
+
+    async def generate_videos(self, model: str, prompt: str) -> Any:
+        """Start a Veo video generation operation.
+
+        Raises:
+            GeminiApiError: On API errors.
+        """
+        try:
+            return await asyncio.to_thread(
+                self._client.models.generate_videos, model=model, prompt=prompt
+            )
+        except Exception as e:
+            _handle_genai_error(e)
+
+    async def get_videos_operation(self, name: str) -> Any:
+        """Poll a video generation operation.
+
+        Raises:
+            GeminiApiError: On API errors.
+        """
+        operations: Any = self._client.operations
+        try:
+            return await asyncio.to_thread(operations.get_videos_operation, name=name)
+        except Exception as e:
+            _handle_genai_error(e)
+
 
 def _handle_genai_error(e: Exception) -> None:
     """Convert google-genai exceptions to UserError subclasses.
