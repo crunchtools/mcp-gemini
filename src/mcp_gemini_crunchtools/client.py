@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # holds its worker thread forever. Bounded here so a hang ends as an error.
 HTTP_TIMEOUT_MS = 300_000
 # Generated images arrive inline as base64, so this is sized for those.
-MAX_RESPONSE_SIZE = 100 * 1024 * 1024
+MAX_RESPONSE_SIZE_BYTES = 100 * 1024 * 1024
 
 
 class _BoundedStream(httpx.SyncByteStream):
@@ -36,7 +36,7 @@ class _BoundedStream(httpx.SyncByteStream):
         total = 0
         for chunk in self._inner:
             total += len(chunk)
-            if total > MAX_RESPONSE_SIZE:
+            if total > MAX_RESPONSE_SIZE_BYTES:
                 raise GeminiApiError("Response too large")
             yield chunk
 
@@ -47,7 +47,7 @@ class _BoundedStream(httpx.SyncByteStream):
 def _reject_oversized(response: httpx.Response) -> None:
     """httpx response hook: runs before the body is read, so it can bound it."""
     content_length = response.headers.get("content-length")
-    if content_length and int(content_length) > MAX_RESPONSE_SIZE:
+    if content_length and int(content_length) > MAX_RESPONSE_SIZE_BYTES:
         raise GeminiApiError("Response too large")
     response.stream = _BoundedStream(response.stream)
 

@@ -13,7 +13,7 @@ from .._image_utils import (
     extract_text_from_response,
     save_generated_image,
 )
-from ..client import get_client
+from ..client import GeminiClient, get_client
 from ..errors import SessionNotFoundError
 from ..models import validate_file_exists
 
@@ -31,7 +31,7 @@ def _cleanup_stale_sessions() -> None:
         del _sessions[sid]
 
 
-async def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
+async def _send_turn(client: GeminiClient, session: dict[str, Any], contents: list[Any]) -> Any:
     """Send one chat turn, never overlapping another turn on the same session.
 
     The client runs the SDK call in a worker thread, which a cancelled caller does not
@@ -42,7 +42,7 @@ async def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
     lock: asyncio.Lock = session["lock"]
     await lock.acquire()
     try:
-        turn = asyncio.ensure_future(get_client().send_chat_turn(session["chat"], contents))
+        turn = asyncio.ensure_future(client.send_chat_turn(session["chat"], contents))
     except BaseException:
         lock.release()
         raise
@@ -137,12 +137,12 @@ async def gemini_continue_image_edit(
         raise SessionNotFoundError(session_id)
 
     session = _sessions[session_id]
-    response = await _send_turn(session, [prompt])
+    client = get_client()
+    response = await _send_turn(client, session, [prompt])
 
     image_data = extract_image_from_response(response)
     output_path = None
     if image_data:
-        client = get_client()
         output_path = save_generated_image(
             image_data[0],
             client.output_dir,

@@ -16,7 +16,7 @@ import pytest
 
 from mcp_gemini_crunchtools.client import (
     HTTP_TIMEOUT_MS,
-    MAX_RESPONSE_SIZE,
+    MAX_RESPONSE_SIZE_BYTES,
     GeminiClient,
     _reject_oversized,
 )
@@ -85,7 +85,7 @@ def test_sdk_client_carries_timeout_and_size_limit() -> None:
 
 
 def test_oversized_response_is_refused() -> None:
-    big = httpx.Response(200, headers={"content-length": str(MAX_RESPONSE_SIZE + 1)})
+    big = httpx.Response(200, headers={"content-length": str(MAX_RESPONSE_SIZE_BYTES + 1)})
     with pytest.raises(GeminiApiError):
         _reject_oversized(big)
     _reject_oversized(httpx.Response(200, headers={"content-length": "10"}))
@@ -93,7 +93,7 @@ def test_oversized_response_is_refused() -> None:
 
 def test_oversized_body_without_content_length_is_refused() -> None:
     chunk = b"x" * (1024 * 1024)
-    chunks = (chunk for _ in range(MAX_RESPONSE_SIZE // len(chunk) + 2))
+    chunks = (chunk for _ in range(MAX_RESPONSE_SIZE_BYTES // len(chunk) + 2))
     with (
         httpx.Client(
             transport=httpx.MockTransport(lambda _: httpx.Response(200, content=chunks)),
