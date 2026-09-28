@@ -75,6 +75,19 @@ async def test_slow_sdk_call_leaves_loop_responsive(method: str) -> None:
         assert returned == result
 
 
+@pytest.mark.parametrize("method", sorted(SDK_PATHS))
+async def test_sdk_errors_surface_as_gemini_api_error(method: str) -> None:
+    client = GeminiClient()
+
+    def failing_sdk(**_: Any) -> None:
+        raise RuntimeError("boom")
+
+    group, name = SDK_PATHS[method]
+    setattr(getattr(client.client, group), name, failing_sdk)
+    with pytest.raises(GeminiApiError, match="boom"):
+        await getattr(client, method)(**CALL_ARGS[method])
+
+
 def test_sdk_client_carries_timeout_and_size_limit() -> None:
     options = GeminiClient().client._api_client._http_options
     assert options.timeout == HTTP_TIMEOUT_MS
@@ -89,6 +102,7 @@ def test_oversized_response_is_refused() -> None:
     with pytest.raises(GeminiApiError):
         _reject_oversized(big)
     _reject_oversized(httpx.Response(200, headers={"content-length": "10"}))
+    _reject_oversized(httpx.Response(200, headers={"content-length": str(MAX_RESPONSE_SIZE_BYTES)}))
 
 
 def test_oversized_body_without_content_length_is_refused() -> None:
@@ -259,3 +273,12 @@ async def test_create_cache_puts_contents_in_the_config() -> None:
     config = client.create_cache.await_args.kwargs["config"]
     assert config.contents
     assert config.system_instruction
+
+
+def test_body_of_exactly_the_limit_is_read() -> None:
+    body = b"x" * MAX_RESPONSE_SIZE_BYTES
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, content=iter([body]))),
+        event_hooks={"response": [_reject_oversized]},
+    ) as http:
+        assert len(http.get("https://example.invalid/").content) == MAX_RESPONSE_SIZE_BYTES

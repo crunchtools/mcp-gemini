@@ -137,6 +137,9 @@ async def gemini_continue_image_edit(
         raise SessionNotFoundError(session_id)
 
     session = _sessions[session_id]
+    # Stamped before the turn: other requests run while it is in flight, and
+    # their stale-session sweep must not remove a session that is mid-turn.
+    session["last_active"] = time.time()
     client = get_client()
     response = await _send_turn(client, session, [prompt])
 
