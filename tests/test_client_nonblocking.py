@@ -8,11 +8,13 @@ import asyncio
 import gc
 import threading
 import time
+from collections.abc import Iterator
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+from google.genai import types
 
 from mcp_gemini_crunchtools.client import (
     HTTP_TIMEOUT_MS,
@@ -300,3 +302,53 @@ def test_body_of_exactly_the_limit_is_read() -> None:
         event_hooks={"response": [_reject_oversized]},
     ) as http:
         assert len(http.get("https://example.invalid/").content) == MAX_RESPONSE_SIZE_BYTES
+
+
+class _RecordingStream(httpx.SyncByteStream):
+    def __init__(self, chunks: list[bytes]) -> None:
+        self.chunks = chunks
+        self.closed = False
+
+    def __iter__(self) -> Iterator[bytes]:
+        yield from self.chunks
+
+    def close(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.parametrize("declared_length", [True, False])
+def test_rejected_response_is_closed(declared_length: bool) -> None:
+    oversize = MAX_RESPONSE_SIZE_BYTES + 1
+    stream = _RecordingStream([b"x" * oversize])
+    headers = {"content-length": str(oversize)} if declared_length else {}
+    with (
+        httpx.Client(
+            transport=httpx.MockTransport(
+                lambda _: httpx.Response(200, headers=headers, stream=stream)
+            ),
+            event_hooks={"response": [_reject_oversized]},
+        ) as http,
+        pytest.raises(GeminiApiError),
+    ):
+        http.get("https://example.invalid/")
+    assert stream.closed
+
+
+async def test_create_cache_from_file_uploads_and_caches_it(tmp_path: Any) -> None:
+    from mcp_gemini_crunchtools.tools.cache import gemini_create_cache
+
+    doc = tmp_path / "doc.pdf"
+    doc.write_bytes(b"%PDF")
+    uploaded = types.File(
+        name="files/doc", uri="https://example.invalid/files/doc", mime_type="application/pdf"
+    )
+    client = MagicMock(
+        upload_file=AsyncMock(return_value=uploaded),
+        create_cache=AsyncMock(return_value=MagicMock()),
+    )
+    with patch("mcp_gemini_crunchtools.tools.cache.get_client", return_value=client):
+        await gemini_create_cache(file_path=str(doc))
+    client.upload_file.assert_awaited_once_with(str(doc))
+    assert "https://example.invalid/files/doc" in str(
+        client.create_cache.await_args.kwargs["config"].contents
+    )
