@@ -1,5 +1,7 @@
 """Multi-turn image editing session tools."""
 
+import asyncio
+import threading
 import time
 import uuid
 from typing import Any
@@ -24,11 +26,15 @@ def _cleanup_stale_sessions() -> None:
     """Remove sessions older than timeout."""
     now = time.time()
     stale = [
-        sid for sid, s in _sessions.items()
-        if now - s["last_active"] > SESSION_TIMEOUT_SECONDS
+        sid for sid, s in _sessions.items() if now - s["last_active"] > SESSION_TIMEOUT_SECONDS
     ]
     for sid in stale:
         del _sessions[sid]
+
+
+def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
+    with session["lock"]:
+        return session["chat"].send_message(contents)
 
 
 async def gemini_start_image_edit(
@@ -68,19 +74,25 @@ async def gemini_start_image_edit(
         file_path = validate_file_exists(file_path)
         contents.append(Image.open(file_path))
 
-    response = chat.send_message(contents)
+    response = await asyncio.to_thread(chat.send_message, contents)
 
     image_data = extract_image_from_response(response)
     output_path = None
     if image_data:
         output_path = save_generated_image(
-            image_data[0], client.output_dir, prefix="edit_start",
+            image_data[0],
+            client.output_dir,
+            prefix="edit_start",
         )
 
     text = extract_text_from_response(response)
 
     _sessions[session_id] = {
         "chat": chat,
+        # Taken inside the worker thread, not around the await: a cancelled
+        # caller does not stop the thread, so an asyncio lock would be
+        # released while the turn is still writing the chat history.
+        "lock": threading.Lock(),
         "last_active": time.time(),
         "turn_count": 1,
         "images": [str(output_path)] if output_path else [],
@@ -113,16 +125,16 @@ async def gemini_continue_image_edit(
         raise SessionNotFoundError(session_id)
 
     session = _sessions[session_id]
-    chat = session["chat"]
-
-    response = chat.send_message([prompt])
+    response = await asyncio.to_thread(_send_turn, session, [prompt])
 
     image_data = extract_image_from_response(response)
     output_path = None
     if image_data:
         client = get_client()
         output_path = save_generated_image(
-            image_data[0], client.output_dir, prefix="edit_continue",
+            image_data[0],
+            client.output_dir,
+            prefix="edit_continue",
         )
         session["images"].append(str(output_path))
 
@@ -171,11 +183,13 @@ async def gemini_list_image_sessions() -> dict[str, Any]:
 
     sessions = []
     for sid, session in _sessions.items():
-        sessions.append({
-            "session_id": sid,
-            "turn_count": session["turn_count"],
-            "image_count": len(session["images"]),
-            "last_active_seconds_ago": int(time.time() - session["last_active"]),
-        })
+        sessions.append(
+            {
+                "session_id": sid,
+                "turn_count": session["turn_count"],
+                "image_count": len(session["images"]),
+                "last_active_seconds_ago": int(time.time() - session["last_active"]),
+            }
+        )
 
     return {"sessions": sessions, "count": len(sessions)}

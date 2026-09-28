@@ -4,6 +4,7 @@ Every tool gets at least one test with mocked google-genai SDK calls.
 No live API calls, no API keys required.
 """
 
+import threading
 import time
 from unittest.mock import MagicMock, patch
 
@@ -205,6 +206,7 @@ class TestImageEditTools:
         session_id = "edit-test123"
         _sessions[session_id] = {
             "chat": MagicMock(),
+            "lock": threading.Lock(),
             "last_active": time.time(),
             "turn_count": 1,
             "images": [],
@@ -222,6 +224,7 @@ class TestImageEditTools:
         session_id = "edit-endtest"
         _sessions[session_id] = {
             "chat": MagicMock(),
+            "lock": threading.Lock(),
             "last_active": time.time(),
             "turn_count": 3,
             "images": ["/fake/path.png"],
@@ -290,7 +293,7 @@ class TestSearchTools:
 class TestDocumentTools:
     """Tests for analyze_document, summarize_pdf, extract_tables."""
 
-    @patch("mcp_gemini_crunchtools.tools.document.os.path.getsize")
+    @patch("mcp_gemini_crunchtools.models.os.path.getsize")
     @patch("mcp_gemini_crunchtools.tools.document.validate_file_exists")
     @patch("mcp_gemini_crunchtools.tools.document.get_client")
     async def test_gemini_analyze_document(
@@ -310,7 +313,7 @@ class TestDocumentTools:
         result = await gemini_analyze_document(file_path="/fake/doc.pdf")
         assert result["response"] == "doc analysis"
 
-    @patch("mcp_gemini_crunchtools.tools.document.os.path.getsize")
+    @patch("mcp_gemini_crunchtools.models.os.path.getsize")
     @patch("mcp_gemini_crunchtools.tools.document.validate_file_exists")
     @patch("mcp_gemini_crunchtools.tools.document.get_client")
     async def test_gemini_summarize_pdf(
@@ -330,7 +333,7 @@ class TestDocumentTools:
         result = await gemini_summarize_pdf(file_path="/fake/doc.pdf")
         assert result["response"] == "pdf summary"
 
-    @patch("mcp_gemini_crunchtools.tools.document.os.path.getsize")
+    @patch("mcp_gemini_crunchtools.models.os.path.getsize")
     @patch("mcp_gemini_crunchtools.tools.document.validate_file_exists")
     @patch("mcp_gemini_crunchtools.tools.document.get_client")
     async def test_gemini_extract_tables(

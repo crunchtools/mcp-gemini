@@ -4,10 +4,13 @@ This module provides a shared client instance for the google-genai SDK.
 All tools should use get_client() to access the Gemini API.
 """
 
+import asyncio
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import httpx
 from google import genai
 from google.genai import types
 
@@ -16,18 +19,61 @@ from .errors import GeminiApiError, RateLimitError
 
 logger = logging.getLogger(__name__)
 
+# google-genai's HTTP layer has no timeout by default, so a stalled request
+# holds its worker thread forever. Bounded here so a hang ends as an error.
+HTTP_TIMEOUT_MS = 300_000
+# Generated images arrive inline as base64, so this is sized for those.
+MAX_RESPONSE_SIZE = 100 * 1024 * 1024
+
+
+class _BoundedStream(httpx.SyncByteStream):
+    """Counts body bytes as they are read, for responses with no Content-Length."""
+
+    def __init__(self, inner: Any) -> None:
+        self._inner = inner
+
+    def __iter__(self) -> Iterator[bytes]:
+        total = 0
+        for chunk in self._inner:
+            total += len(chunk)
+            if total > MAX_RESPONSE_SIZE:
+                raise GeminiApiError("Response too large")
+            yield chunk
+
+    def close(self) -> None:
+        self._inner.close()
+
+
+def _reject_oversized(response: httpx.Response) -> None:
+    """httpx response hook: runs before the body is read, so it can bound it."""
+    content_length = response.headers.get("content-length")
+    if content_length and int(content_length) > MAX_RESPONSE_SIZE:
+        raise GeminiApiError("Response too large")
+    response.stream = _BoundedStream(response.stream)
+
 
 class GeminiClient:
     """Wrapper around google-genai Client.
 
     Provides a single shared client instance and convenience methods
     for common Gemini operations with proper error handling.
+
+    The network methods are async and run the SDK's synchronous call in a
+    worker thread. Called inline from an async tool, one slow generation
+    blocked the event loop, and with it every other request, down to
+    ``initialize``: the server stopped answering anyone until it returned.
     """
 
     def __init__(self) -> None:
         """Initialize the Gemini client."""
         config = get_config()
-        self._client = genai.Client(api_key=config.api_key)
+        self._client = genai.Client(
+            api_key=config.api_key,
+            http_options=types.HttpOptions(
+                timeout=HTTP_TIMEOUT_MS,
+                client_args={"event_hooks": {"response": [_reject_oversized]}},
+            ),
+        )
         self._config = config
 
     @property
@@ -40,7 +86,7 @@ class GeminiClient:
         """Get the output directory for generated files."""
         return self._config.output_dir
 
-    def generate_content(
+    async def generate_content(
         self,
         model: str,
         contents: Any,
@@ -61,7 +107,8 @@ class GeminiClient:
             RateLimitError: On rate limiting.
         """
         try:
-            return self._client.models.generate_content(
+            return await asyncio.to_thread(
+                self._client.models.generate_content,
                 model=model,
                 contents=contents,
                 config=config,
@@ -69,7 +116,7 @@ class GeminiClient:
         except Exception as e:
             _handle_genai_error(e)
 
-    def generate_images(
+    async def generate_images(
         self,
         model: str,
         prompt: str,
@@ -90,7 +137,8 @@ class GeminiClient:
             RateLimitError: On rate limiting.
         """
         try:
-            return self._client.models.generate_images(
+            return await asyncio.to_thread(
+                self._client.models.generate_images,
                 model=model,
                 prompt=prompt,
                 config=config,
@@ -114,7 +162,7 @@ class GeminiClient:
         """
         return self._client.chats.create(model=model, config=config)
 
-    def upload_file(self, file_path: str) -> Any:
+    async def upload_file(self, file_path: str) -> Any:
         """Upload a file to Gemini for use in generation.
 
         Args:
@@ -127,11 +175,11 @@ class GeminiClient:
             GeminiApiError: On upload errors.
         """
         try:
-            return self._client.files.upload(file=file_path)
+            return await asyncio.to_thread(self._client.files.upload, file=file_path)
         except Exception as e:
             _handle_genai_error(e)
 
-    def count_tokens(self, model: str, contents: Any) -> Any:
+    async def count_tokens(self, model: str, contents: Any) -> Any:
         """Count tokens in content.
 
         Args:
@@ -142,7 +190,8 @@ class GeminiClient:
             Token count response.
         """
         try:
-            return self._client.models.count_tokens(
+            return await asyncio.to_thread(
+                self._client.models.count_tokens,
                 model=model,
                 contents=contents,
             )

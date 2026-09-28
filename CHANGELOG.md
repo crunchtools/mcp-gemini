@@ -8,6 +8,22 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-28
+
+### Fixed
+
+- A slow Gemini call no longer freezes the server for every other caller.
+  Tools called the synchronous google-genai SDK from async handlers, so one
+  long generation blocked the event loop until it returned; on 2026-09-28 the
+  server stopped answering even `initialize` and had to be restarted. SDK
+  calls now run in a worker thread, and requests carry a 300-second HTTP
+  timeout so a stalled one ends as an error.
+- Turns within one image-edit session are serialized, so two concurrent
+  edits cannot interleave the chat history.
+- Responses larger than 100 MB are refused, chunked ones included, and
+  `gemini_create_cache` enforces the same upload size limit as the document
+  tools.
+
 ## [0.3.0] - 2026-03-02
 
 v2 best practices upgrade.

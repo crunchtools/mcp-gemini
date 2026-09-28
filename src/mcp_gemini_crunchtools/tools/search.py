@@ -28,8 +28,10 @@ async def gemini_search(
         tools=[types.Tool(google_search=types.GoogleSearch())],
     )
 
-    response = client.generate_content(
-        model=model_name, contents=[query], config=config,
+    response = await client.generate_content(
+        model=model_name,
+        contents=[query],
+        config=config,
     )
 
     return {"response": response.text, "model": model_name, "query": query}

@@ -6,22 +6,39 @@ All user-provided values are validated before being used.
 
 import os
 
-VALID_ASPECT_RATIOS = frozenset({
-    "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9",
-})
+VALID_ASPECT_RATIOS = frozenset(
+    {
+        "1:1",
+        "2:3",
+        "3:2",
+        "3:4",
+        "4:3",
+        "4:5",
+        "5:4",
+        "9:16",
+        "16:9",
+        "21:9",
+    }
+)
 
 VALID_IMAGE_SIZES = frozenset({"1K", "2K", "4K"})
 
-VALID_IMAGEN_MODELS = frozenset({
-    "imagen-4.0-generate-001",
-    "imagen-4.0-ultra-generate-001",
-    "imagen-4.0-fast-generate-001",
-})
+VALID_IMAGEN_MODELS = frozenset(
+    {
+        "imagen-4.0-generate-001",
+        "imagen-4.0-ultra-generate-001",
+        "imagen-4.0-fast-generate-001",
+    }
+)
 
-VALID_TEXT_MODELS = frozenset({
-    "pro", "flash",
-    "gemini-3-pro-preview", "gemini-3-flash-preview",
-})
+VALID_TEXT_MODELS = frozenset(
+    {
+        "pro",
+        "flash",
+        "gemini-3-pro-preview",
+        "gemini-3-flash-preview",
+    }
+)
 
 MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024
 MAX_DOCUMENT_SIZE_BYTES = 100 * 1024 * 1024
@@ -62,6 +79,21 @@ def validate_file_exists(file_path: str) -> str:
         msg = f"File not found: {file_path}"
         raise ValueError(msg)
     return file_path
+
+
+def validate_upload_size(file_path: str) -> None:
+    """Refuse a file larger than the upload limit.
+
+    Args:
+        file_path: Path to an existing file.
+
+    Raises:
+        ValueError: If the file exceeds MAX_DOCUMENT_SIZE_BYTES.
+    """
+    file_size = os.path.getsize(file_path)
+    if file_size > MAX_DOCUMENT_SIZE_BYTES:
+        msg = f"File too large ({file_size} bytes). Max: {MAX_DOCUMENT_SIZE_BYTES} bytes."
+        raise ValueError(msg)
 
 
 def validate_aspect_ratio(aspect_ratio: str) -> str:

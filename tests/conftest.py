@@ -7,7 +7,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -122,6 +122,8 @@ def mock_gemini_client(**overrides: Any) -> MagicMock:
         A MagicMock mimicking GeminiClient with default behaviors.
     """
     mock_client = MagicMock()
+    for method in ("generate_content", "generate_images", "upload_file", "count_tokens"):
+        setattr(mock_client, method, AsyncMock())
     mock_client.generate_content.return_value = mock_generate_response()
     mock_client.generate_images.return_value = None
     mock_client.create_chat.return_value = MagicMock()

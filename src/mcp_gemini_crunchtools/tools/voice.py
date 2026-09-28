@@ -9,8 +9,14 @@ from google.genai import types
 from ..client import get_client
 
 AVAILABLE_VOICES = [
-    "Zephyr", "Puck", "Charon", "Kore", "Fenrir",
-    "Leda", "Orus", "Aoede",
+    "Zephyr",
+    "Puck",
+    "Charon",
+    "Kore",
+    "Fenrir",
+    "Leda",
+    "Orus",
+    "Aoede",
 ]
 
 
@@ -40,7 +46,7 @@ async def gemini_speak(
         ),
     )
 
-    response = client.generate_content(
+    response = await client.generate_content(
         model="gemini-2.5-flash-preview-tts",
         contents=[text],
         config=config,
@@ -107,7 +113,7 @@ async def gemini_dialogue(
         ),
     )
 
-    response = client.generate_content(
+    response = await client.generate_content(
         model="gemini-2.5-flash-preview-tts",
         contents=[text],
         config=config,

@@ -1,5 +1,6 @@
 """Video generation tools."""
 
+import asyncio
 from typing import Any
 
 from ..client import get_client
@@ -29,7 +30,8 @@ async def gemini_generate_video(
     if negative_prompt:
         full_prompt = f"{prompt}. Avoid: {negative_prompt}"
 
-    response = client.client.models.generate_videos(
+    response = await asyncio.to_thread(
+        client.client.models.generate_videos,
         model="veo-2.0-generate-001",
         prompt=full_prompt,
     )
@@ -55,7 +57,7 @@ async def gemini_check_video(
     client = get_client()
 
     operations: Any = client.client.operations
-    operation = operations.get_videos_operation(name=operation_name)
+    operation = await asyncio.to_thread(operations.get_videos_operation, name=operation_name)
 
     if operation.done:
         video_path = None
