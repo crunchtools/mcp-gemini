@@ -121,7 +121,7 @@ async def test_turns_in_one_edit_session_do_not_overlap() -> None:
     chat = MagicMock(send_message=send_message)
     image_edit._sessions["edit-x"] = {
         "chat": chat,
-        "lock": threading.Lock(),
+        "lock": asyncio.Lock(),
         "last_active": time.time(),
         "turn_count": 1,
         "images": [],
@@ -132,3 +132,38 @@ async def test_turns_in_one_edit_session_do_not_overlap() -> None:
         image_edit.gemini_continue_image_edit("edit-x", "b"),
     )
     assert peak == 1
+
+
+async def test_cancelled_turn_holds_the_session_until_its_worker_finishes() -> None:
+    from mcp_gemini_crunchtools.tools import image_edit
+
+    first_running = threading.Event()
+    release_first = threading.Event()
+    order: list[str] = []
+
+    def send_message(contents: list[str]) -> MagicMock:
+        if contents == ["a"]:
+            first_running.set()
+            release_first.wait(5)
+        order.append(contents[0])
+        return MagicMock(candidates=[])
+
+    image_edit._sessions["edit-y"] = {
+        "chat": MagicMock(send_message=send_message),
+        "lock": asyncio.Lock(),
+        "last_active": time.time(),
+        "turn_count": 1,
+        "images": [],
+    }
+
+    first = asyncio.create_task(image_edit.gemini_continue_image_edit("edit-y", "a"))
+    await asyncio.to_thread(first_running.wait, 5)
+    first.cancel()
+    second = asyncio.create_task(image_edit.gemini_continue_image_edit("edit-y", "b"))
+    await asyncio.sleep(0.1)
+    assert order == []
+
+    release_first.set()
+    await second
+    assert order == ["a", "b"]
+    assert first.cancelled()

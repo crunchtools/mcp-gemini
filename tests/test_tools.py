@@ -4,7 +4,7 @@ Every tool gets at least one test with mocked google-genai SDK calls.
 No live API calls, no API keys required.
 """
 
-import threading
+import asyncio
 import time
 from unittest.mock import MagicMock, patch
 
@@ -206,7 +206,7 @@ class TestImageEditTools:
         session_id = "edit-test123"
         _sessions[session_id] = {
             "chat": MagicMock(),
-            "lock": threading.Lock(),
+            "lock": asyncio.Lock(),
             "last_active": time.time(),
             "turn_count": 1,
             "images": [],
@@ -224,7 +224,7 @@ class TestImageEditTools:
         session_id = "edit-endtest"
         _sessions[session_id] = {
             "chat": MagicMock(),
-            "lock": threading.Lock(),
+            "lock": asyncio.Lock(),
             "last_active": time.time(),
             "turn_count": 3,
             "images": ["/fake/path.png"],

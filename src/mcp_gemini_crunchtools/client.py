@@ -71,6 +71,9 @@ class GeminiClient:
             api_key=config.api_key,
             http_options=types.HttpOptions(
                 timeout=HTTP_TIMEOUT_MS,
+                # Uncompressed, so the bytes the size limit counts are the
+                # bytes the SDK reads; a gzip body could expand past it.
+                headers={"Accept-Encoding": "identity"},
                 client_args={"event_hooks": {"response": [_reject_oversized]}},
             ),
         )

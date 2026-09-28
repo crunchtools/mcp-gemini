@@ -1,7 +1,6 @@
 """Multi-turn image editing session tools."""
 
 import asyncio
-import threading
 import time
 import uuid
 from typing import Any
@@ -32,9 +31,23 @@ def _cleanup_stale_sessions() -> None:
         del _sessions[sid]
 
 
-def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
-    with session["lock"]:
-        return session["chat"].send_message(contents)
+async def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
+    """Send one chat turn, never overlapping another turn on the same session.
+
+    The SDK call runs in a worker thread, which a cancelled caller does not
+    stop. So the lock is released when the worker finishes rather than when
+    the caller leaves, and the caller awaits it through a shield. Waiters
+    queue on the event loop, not in the shared thread pool.
+    """
+    lock: asyncio.Lock = session["lock"]
+    await lock.acquire()
+    try:
+        turn = asyncio.ensure_future(asyncio.to_thread(session["chat"].send_message, contents))
+    except BaseException:
+        lock.release()
+        raise
+    turn.add_done_callback(lambda _: lock.release())
+    return await asyncio.shield(turn)
 
 
 async def gemini_start_image_edit(
@@ -89,10 +102,7 @@ async def gemini_start_image_edit(
 
     _sessions[session_id] = {
         "chat": chat,
-        # Taken inside the worker thread, not around the await: a cancelled
-        # caller does not stop the thread, so an asyncio lock would be
-        # released while the turn is still writing the chat history.
-        "lock": threading.Lock(),
+        "lock": asyncio.Lock(),
         "last_active": time.time(),
         "turn_count": 1,
         "images": [str(output_path)] if output_path else [],
@@ -125,7 +135,7 @@ async def gemini_continue_image_edit(
         raise SessionNotFoundError(session_id)
 
     session = _sessions[session_id]
-    response = await asyncio.to_thread(_send_turn, session, [prompt])
+    response = await _send_turn(session, [prompt])
 
     image_data = extract_image_from_response(response)
     output_path = None
