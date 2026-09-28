@@ -1,10 +1,9 @@
 """Document analysis tools."""
 
-import os
 from typing import Any
 
 from ..client import get_client
-from ..models import MAX_DOCUMENT_SIZE_BYTES, validate_file_exists
+from ..models import validate_file_exists, validate_upload_size
 from .query import _resolve_model
 
 
@@ -29,14 +28,12 @@ async def gemini_analyze_document(
     client = get_client()
     model_name = _resolve_model(model)
 
-    file_size = os.path.getsize(file_path)
-    if file_size > MAX_DOCUMENT_SIZE_BYTES:
-        msg = f"File too large ({file_size} bytes). Max: {MAX_DOCUMENT_SIZE_BYTES} bytes."
-        raise ValueError(msg)
+    validate_upload_size(file_path)
 
-    uploaded_file = client.upload_file(file_path)
-    response = client.generate_content(
-        model=model_name, contents=[question, uploaded_file],
+    uploaded_file = await client.upload_file(file_path)
+    response = await client.generate_content(
+        model=model_name,
+        contents=[question, uploaded_file],
     )
 
     return {
@@ -63,7 +60,9 @@ async def gemini_summarize_pdf(
     """
     prompt = f"Summarize this PDF document in a {style} style."
     return await gemini_analyze_document(
-        file_path=file_path, question=prompt, model=model,
+        file_path=file_path,
+        question=prompt,
+        model=model,
     )
 
 
@@ -87,5 +86,7 @@ async def gemini_extract_tables(
         "Preserve the structure and data accurately."
     )
     return await gemini_analyze_document(
-        file_path=file_path, question=prompt, model=model,
+        file_path=file_path,
+        question=prompt,
+        model=model,
     )

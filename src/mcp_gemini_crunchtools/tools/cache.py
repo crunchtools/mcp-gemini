@@ -5,7 +5,7 @@ from typing import Any
 from google.genai import types
 
 from ..client import get_client
-from ..models import validate_file_exists
+from ..models import validate_file_exists, validate_upload_size
 from .query import _resolve_model
 
 
@@ -38,7 +38,8 @@ async def gemini_create_cache(
     contents: list[Any] = []
     if file_path:
         file_path = validate_file_exists(file_path)
-        uploaded_file = client.upload_file(file_path)
+        validate_upload_size(file_path)
+        uploaded_file = await client.upload_file(file_path)
         contents.append(uploaded_file)
     elif content:
         contents.append(content)
@@ -46,18 +47,15 @@ async def gemini_create_cache(
         msg = "Either file_path or content must be provided."
         raise ValueError(msg)
 
-    cache_config: dict[str, Any] = {
-        "model": model_name,
-        "contents": contents,
-        "config": types.CreateCachedContentConfig(
-            display_name=display_name,
-            ttl=f"{ttl_minutes * 60}s",
-        ),
-    }
-    if system_instruction:
-        cache_config["config"].system_instruction = system_instruction
-
-    cache = client.client.caches.create(**cache_config)
+    # The SDK takes the cached contents inside the config; passing them as
+    # their own argument raised TypeError on every call.
+    config = types.CreateCachedContentConfig(
+        contents=contents,
+        display_name=display_name,
+        ttl=f"{ttl_minutes * 60}s",
+        system_instruction=system_instruction,
+    )
+    cache = await client.create_cache(model=model_name, config=config)
 
     return {
         "cache_name": cache.name,
@@ -86,7 +84,7 @@ async def gemini_query_cache(
         cached_content=cache_name,
     )
 
-    response = client.generate_content(
+    response = await client.generate_content(
         model="gemini-2.5-flash",
         contents=[question],
         config=config,
@@ -105,17 +103,19 @@ async def gemini_list_caches() -> dict[str, Any]:
         List of active caches.
     """
     client = get_client()
-    caches_list = list(client.client.caches.list())
+    caches_list = await client.list_caches()
 
     result = []
     for cache in caches_list:
-        result.append({
-            "name": cache.name,
-            "display_name": cache.display_name,
-            "model": cache.model,
-            "create_time": str(cache.create_time) if cache.create_time else None,
-            "expire_time": str(cache.expire_time) if cache.expire_time else None,
-        })
+        result.append(
+            {
+                "name": cache.name,
+                "display_name": cache.display_name,
+                "model": cache.model,
+                "create_time": str(cache.create_time) if cache.create_time else None,
+                "expire_time": str(cache.expire_time) if cache.expire_time else None,
+            }
+        )
 
     return {"caches": result, "count": len(result)}
 
@@ -132,6 +132,6 @@ async def gemini_delete_cache(
         Deletion confirmation.
     """
     client = get_client()
-    client.client.caches.delete(name=cache_name)
+    await client.delete_cache(cache_name)
 
     return {"cache_name": cache_name, "status": "deleted"}

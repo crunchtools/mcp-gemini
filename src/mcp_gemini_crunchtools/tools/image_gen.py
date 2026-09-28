@@ -49,7 +49,7 @@ async def gemini_generate_image(
 
     config = types.GenerateContentConfig(**config_kwargs)
 
-    response = client.generate_content(
+    response = await client.generate_content(
         model="gemini-2.5-flash-image",
         contents=[full_prompt],
         config=config,
@@ -60,7 +60,9 @@ async def gemini_generate_image(
         raise ImageGenerationError("No image was generated. Try rephrasing your prompt.")
 
     output_path = save_generated_image(
-        image_data[0], client.output_dir, prefix="gemini_gen",
+        image_data[0],
+        client.output_dir,
+        prefix="gemini_gen",
     )
     text = extract_text_from_response(response)
 
@@ -100,7 +102,7 @@ async def gemini_generate_image_with_input(
         response_modalities=["TEXT", "IMAGE"],
     )
 
-    response = client.generate_content(
+    response = await client.generate_content(
         model="gemini-2.5-flash-image",
         contents=[prompt, input_image],
         config=config,
@@ -108,12 +110,12 @@ async def gemini_generate_image_with_input(
 
     image_data = extract_image_from_response(response)
     if image_data is None:
-        raise ImageGenerationError(
-            "No image was generated. Try rephrasing your prompt."
-        )
+        raise ImageGenerationError("No image was generated. Try rephrasing your prompt.")
 
     output_path = save_generated_image(
-        image_data[0], client.output_dir, prefix="gemini_edit",
+        image_data[0],
+        client.output_dir,
+        prefix="gemini_edit",
     )
     text = extract_text_from_response(response)
 
@@ -161,7 +163,7 @@ async def gemini_image_prompt(
         "Include details about composition, lighting, colors, and style."
     )
 
-    response = client.generate_content(model=model_name, contents=[prompt])
+    response = await client.generate_content(model=model_name, contents=[prompt])
     return {"prompt": response.text, "model": model_name}
 
 
@@ -194,8 +196,10 @@ async def gemini_imagen_generate(
         aspect_ratio=aspect_ratio,
     )
 
-    response = client.generate_images(
-        model=model, prompt=prompt, config=config,
+    response = await client.generate_images(
+        model=model,
+        prompt=prompt,
+        config=config,
     )
 
     saved_paths: list[str] = []

@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP(
     name="mcp-gemini-crunchtools",
-    version="0.3.0",
+    version="0.3.1",
     instructions=(
         "Secure MCP server for Google Gemini AI - text, image, video, research, and more. "
         "Generated files (images, audio, video) are saved to the output directory. "
@@ -68,6 +68,7 @@ mcp = FastMCP(
         "accessible at this same mount path when running as a container."
     ),
 )
+
 
 @mcp.tool()
 async def gemini_query_tool(
@@ -85,7 +86,8 @@ async def gemini_query_tool(
         system_instruction: Optional system instruction to guide the response.
     """
     return await gemini_query(
-        prompt=prompt, model=model,
+        prompt=prompt,
+        model=model,
         use_google_search=use_google_search,
         system_instruction=system_instruction,
     )
@@ -107,7 +109,10 @@ async def gemini_brainstorm_tool(
         model: Model to use.
     """
     return await gemini_brainstorm(
-        topic=topic, context=context, num_ideas=num_ideas, model=model,
+        topic=topic,
+        context=context,
+        num_ideas=num_ideas,
+        model=model,
     )
 
 
@@ -127,7 +132,10 @@ async def gemini_analyze_code_tool(
         model: Model to use.
     """
     return await gemini_analyze_code(
-        code=code, language=language, focus=focus, model=model,
+        code=code,
+        language=language,
+        focus=focus,
+        model=model,
     )
 
 
@@ -145,7 +153,9 @@ async def gemini_analyze_text_tool(
         model: Model to use.
     """
     return await gemini_analyze_text(
-        text=text, analysis_type=analysis_type, model=model,
+        text=text,
+        analysis_type=analysis_type,
+        model=model,
     )
 
 
@@ -165,8 +175,12 @@ async def gemini_summarize_tool(
         model: Model to use.
     """
     return await gemini_summarize(
-        content=content, format=format, length=length, model=model,
+        content=content,
+        format=format,
+        length=length,
+        model=model,
     )
+
 
 @mcp.tool()
 async def gemini_generate_image_tool(
@@ -186,8 +200,10 @@ async def gemini_generate_image_tool(
         use_google_search: Ground with Google Search results.
     """
     return await gemini_generate_image(
-        prompt=prompt, aspect_ratio=aspect_ratio,
-        image_size=image_size, style=style,
+        prompt=prompt,
+        aspect_ratio=aspect_ratio,
+        image_size=image_size,
+        style=style,
         use_google_search=use_google_search,
     )
 
@@ -209,7 +225,8 @@ async def gemini_generate_image_with_input_tool(
         _aspect_ratio: Desired aspect ratio for the output (currently unused).
     """
     return await gemini_generate_image_with_input(
-        prompt=prompt, file_path=file_path,
+        prompt=prompt,
+        file_path=file_path,
     )
 
 
@@ -229,7 +246,10 @@ async def gemini_image_prompt_tool(
         model: Model to use for prompt crafting.
     """
     return await gemini_image_prompt(
-        description=description, style=style, mood=mood, model=model,
+        description=description,
+        style=style,
+        mood=mood,
+        model=model,
     )
 
 
@@ -254,10 +274,12 @@ async def gemini_imagen_generate_tool(
         aspect_ratio: Aspect ratio (1:1, 3:4, 4:3, 9:16, 16:9).
     """
     return await gemini_imagen_generate(
-        prompt=prompt, model=model,
+        prompt=prompt,
+        model=model,
         number_of_images=number_of_images,
         aspect_ratio=aspect_ratio,
     )
+
 
 @mcp.tool()
 async def gemini_start_image_edit_tool(
@@ -277,7 +299,8 @@ async def gemini_start_image_edit_tool(
         use_google_search: Ground with Google Search results.
     """
     return await gemini_start_image_edit(
-        prompt=prompt, file_path=file_path,
+        prompt=prompt,
+        file_path=file_path,
         use_google_search=use_google_search,
     )
 
@@ -294,7 +317,8 @@ async def gemini_continue_image_edit_tool(
         prompt: Editing instructions (e.g., "make the sky bluer").
     """
     return await gemini_continue_image_edit(
-        session_id=session_id, prompt=prompt,
+        session_id=session_id,
+        prompt=prompt,
     )
 
 
@@ -315,6 +339,7 @@ async def gemini_list_image_sessions_tool() -> dict[str, Any]:
     """List all active image editing sessions."""
     return await gemini_list_image_sessions()
 
+
 @mcp.tool()
 async def gemini_analyze_image_tool(
     image_path: str,
@@ -329,8 +354,11 @@ async def gemini_analyze_image_tool(
         model: Model to use ('pro' or 'flash').
     """
     return await gemini_analyze_image(
-        image_path=image_path, query=query, model=model,
+        image_path=image_path,
+        query=query,
+        model=model,
     )
+
 
 @mcp.tool()
 async def gemini_search_tool(
@@ -344,6 +372,7 @@ async def gemini_search_tool(
         model: Model to use.
     """
     return await gemini_search(query=query, model=model)
+
 
 @mcp.tool()
 async def gemini_analyze_document_tool(
@@ -359,7 +388,9 @@ async def gemini_analyze_document_tool(
         model: Model to use.
     """
     return await gemini_analyze_document(
-        file_path=file_path, question=question, model=model,
+        file_path=file_path,
+        question=question,
+        model=model,
     )
 
 
@@ -377,7 +408,9 @@ async def gemini_summarize_pdf_tool(
         model: Model to use.
     """
     return await gemini_summarize_pdf(
-        file_path=file_path, style=style, model=model,
+        file_path=file_path,
+        style=style,
+        model=model,
     )
 
 
@@ -395,8 +428,11 @@ async def gemini_extract_tables_tool(
         model: Model to use.
     """
     return await gemini_extract_tables(
-        file_path=file_path, output_format=output_format, model=model,
+        file_path=file_path,
+        output_format=output_format,
+        model=model,
     )
+
 
 @mcp.tool()
 async def gemini_analyze_url_tool(
@@ -414,8 +450,10 @@ async def gemini_analyze_url_tool(
         model: Model to use.
     """
     return await gemini_analyze_url(
-        urls=urls, question=question,
-        use_google_search=use_google_search, model=model,
+        urls=urls,
+        question=question,
+        use_google_search=use_google_search,
+        model=model,
     )
 
 
@@ -435,7 +473,10 @@ async def gemini_compare_urls_tool(
         model: Model to use.
     """
     return await gemini_compare_urls(
-        url1=url1, url2=url2, aspect=aspect, model=model,
+        url1=url1,
+        url2=url2,
+        aspect=aspect,
+        model=model,
     )
 
 
@@ -455,9 +496,12 @@ async def gemini_extract_from_url_tool(
         model: Model to use.
     """
     return await gemini_extract_from_url(
-        url=url, data_type=data_type,
-        custom_fields=custom_fields, model=model,
+        url=url,
+        data_type=data_type,
+        custom_fields=custom_fields,
+        model=model,
     )
+
 
 @mcp.tool()
 async def gemini_generate_video_tool(
@@ -489,6 +533,7 @@ async def gemini_check_video_tool(
     """
     return await gemini_check_video(operation_name=operation_name)
 
+
 @mcp.tool()
 async def gemini_youtube_tool(
     url: str,
@@ -519,6 +564,7 @@ async def gemini_youtube_summary_tool(
         model: Model to use.
     """
     return await gemini_youtube_summary(url=url, style=style, model=model)
+
 
 @mcp.tool()
 async def gemini_speak_tool(
@@ -554,6 +600,7 @@ async def gemini_dialogue_tool(
 async def gemini_list_voices_tool() -> dict[str, Any]:
     """List available voices for text-to-speech."""
     return await gemini_list_voices()
+
 
 @mcp.tool()
 async def gemini_deep_research_tool(
@@ -593,8 +640,10 @@ async def gemini_research_followup_tool(
         question: Follow-up question.
     """
     return await gemini_research_followup(
-        research_id=research_id, question=question,
+        research_id=research_id,
+        question=question,
     )
+
 
 @mcp.tool()
 async def gemini_create_cache_tool(
@@ -618,10 +667,12 @@ async def gemini_create_cache_tool(
         model: Model to use.
     """
     return await gemini_create_cache(
-        file_path=file_path, content=content,
+        file_path=file_path,
+        content=content,
         display_name=display_name,
         system_instruction=system_instruction,
-        ttl_minutes=ttl_minutes, model=model,
+        ttl_minutes=ttl_minutes,
+        model=model,
     )
 
 
@@ -637,7 +688,8 @@ async def gemini_query_cache_tool(
         question: Question to ask about the cached content.
     """
     return await gemini_query_cache(
-        cache_name=cache_name, question=question,
+        cache_name=cache_name,
+        question=question,
     )
 
 
@@ -658,6 +710,7 @@ async def gemini_delete_cache_tool(
     """
     return await gemini_delete_cache(cache_name=cache_name)
 
+
 @mcp.tool()
 async def gemini_structured_tool(
     prompt: str,
@@ -674,8 +727,10 @@ async def gemini_structured_tool(
         model: Model to use.
     """
     return await gemini_structured(
-        prompt=prompt, schema=schema,
-        use_google_search=use_google_search, model=model,
+        prompt=prompt,
+        schema=schema,
+        use_google_search=use_google_search,
+        model=model,
     )
 
 
@@ -695,9 +750,12 @@ async def gemini_extract_tool(
         model: Model to use.
     """
     return await gemini_extract(
-        text=text, extract_type=extract_type,
-        custom_fields=custom_fields, model=model,
+        text=text,
+        extract_type=extract_type,
+        custom_fields=custom_fields,
+        model=model,
     )
+
 
 @mcp.tool()
 async def gemini_count_tokens_tool(
@@ -711,6 +769,7 @@ async def gemini_count_tokens_tool(
         model: Model to count tokens for.
     """
     return await gemini_count_tokens(content=content, model=model)
+
 
 @mcp.tool()
 async def gemini_run_code_tool(

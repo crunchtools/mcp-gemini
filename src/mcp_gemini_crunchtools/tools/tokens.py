@@ -22,7 +22,7 @@ async def gemini_count_tokens(
     client = get_client()
     model_name = _resolve_model(model)
 
-    response = client.count_tokens(model=model_name, contents=[content])
+    response = await client.count_tokens(model=model_name, contents=[content])
 
     return {
         "total_tokens": response.total_tokens if response else 0,

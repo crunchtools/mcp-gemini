@@ -29,10 +29,7 @@ async def gemini_generate_video(
     if negative_prompt:
         full_prompt = f"{prompt}. Avoid: {negative_prompt}"
 
-    response = client.client.models.generate_videos(
-        model="veo-2.0-generate-001",
-        prompt=full_prompt,
-    )
+    response = await client.generate_videos(model="veo-2.0-generate-001", prompt=full_prompt)
 
     return {
         "operation_name": response.name if response else None,
@@ -54,8 +51,7 @@ async def gemini_check_video(
     """
     client = get_client()
 
-    operations: Any = client.client.operations
-    operation = operations.get_videos_operation(name=operation_name)
+    operation = await client.get_videos_operation(operation_name)
 
     if operation.done:
         video_path = None

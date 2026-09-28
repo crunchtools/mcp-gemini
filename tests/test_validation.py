@@ -1,13 +1,17 @@
 """Input validation tests for models.py validators."""
 
+from pathlib import Path
+
 import pytest
 
 from mcp_gemini_crunchtools.models import (
+    MAX_DOCUMENT_SIZE_BYTES,
     VALID_ASPECT_RATIOS,
     VALID_IMAGE_SIZES,
     validate_aspect_ratio,
     validate_file_path,
     validate_image_size,
+    validate_upload_size,
 )
 
 
@@ -47,6 +51,28 @@ class TestValidateFileExists:
 
         with pytest.raises(ValueError, match="absolute path"):
             validate_file_exists("relative/file.txt")
+
+
+class TestValidateUploadSize:
+    """Tests for validate_upload_size."""
+
+    def test_file_within_limit_accepted(self, tmp_path: Path) -> None:
+        small = tmp_path / "small.pdf"
+        small.write_bytes(b"x" * 10)
+        validate_upload_size(str(small))
+
+    def test_file_at_exact_limit_accepted(self, tmp_path: Path) -> None:
+        edge = tmp_path / "edge.pdf"
+        with edge.open("wb") as f:
+            f.truncate(MAX_DOCUMENT_SIZE_BYTES)
+        validate_upload_size(str(edge))
+
+    def test_oversized_file_rejected(self, tmp_path: Path) -> None:
+        big = tmp_path / "big.pdf"
+        with big.open("wb") as f:
+            f.truncate(MAX_DOCUMENT_SIZE_BYTES + 1)
+        with pytest.raises(ValueError, match="too large"):
+            validate_upload_size(str(big))
 
 
 class TestValidateAspectRatio:

@@ -32,8 +32,10 @@ async def gemini_youtube(
 
     prompt = f"{question}\n\nYouTube URL: {url}"
 
-    response = client.generate_content(
-        model=model_name, contents=[prompt], config=config,
+    response = await client.generate_content(
+        model=model_name,
+        contents=[prompt],
+        config=config,
     )
 
     return {"response": response.text, "model": model_name, "url": url}

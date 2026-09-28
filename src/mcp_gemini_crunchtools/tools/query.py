@@ -45,8 +45,10 @@ async def gemini_query(
 
     config = types.GenerateContentConfig(**config_kwargs) if config_kwargs else None
 
-    response = client.generate_content(
-        model=model_name, contents=[prompt], config=config,
+    response = await client.generate_content(
+        model=model_name,
+        contents=[prompt],
+        config=config,
     )
     return {"response": response.text, "model": model_name}
 
@@ -75,7 +77,7 @@ async def gemini_brainstorm(
     if context:
         prompt += f"\n\nContext: {context}"
 
-    response = client.generate_content(model=model_name, contents=[prompt])
+    response = await client.generate_content(model=model_name, contents=[prompt])
     return {"response": response.text, "model": model_name, "topic": topic}
 
 
@@ -104,7 +106,7 @@ async def gemini_analyze_code(
         prompt += f" ({language})"
     prompt += f" with focus on {focus}:\n\n```\n{code}\n```"
 
-    response = client.generate_content(model=model_name, contents=[prompt])
+    response = await client.generate_content(model=model_name, contents=[prompt])
     return {"response": response.text, "model": model_name, "focus": focus}
 
 
@@ -128,7 +130,7 @@ async def gemini_analyze_text(
 
     prompt = f"Perform {analysis_type} analysis on the following text:\n\n{text}"
 
-    response = client.generate_content(model=model_name, contents=[prompt])
+    response = await client.generate_content(model=model_name, contents=[prompt])
     return {"response": response.text, "model": model_name, "analysis_type": analysis_type}
 
 
@@ -152,10 +154,7 @@ async def gemini_summarize(
     client = get_client()
     model_name = _resolve_model(model)
 
-    prompt = (
-        f"Summarize the following content in {format} format. "
-        f"Length: {length}.\n\n{content}"
-    )
+    prompt = f"Summarize the following content in {format} format. Length: {length}.\n\n{content}"
 
-    response = client.generate_content(model=model_name, contents=[prompt])
+    response = await client.generate_content(model=model_name, contents=[prompt])
     return {"response": response.text, "model": model_name, "format": format}

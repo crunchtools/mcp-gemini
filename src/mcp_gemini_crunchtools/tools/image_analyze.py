@@ -30,8 +30,9 @@ async def gemini_analyze_image(
 
     img = Image.open(image_path)
 
-    response = client.generate_content(
-        model=model_name, contents=[query, img],
+    response = await client.generate_content(
+        model=model_name,
+        contents=[query, img],
     )
 
     return {

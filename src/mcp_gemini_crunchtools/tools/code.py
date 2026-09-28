@@ -37,8 +37,10 @@ async def gemini_run_code(
         tools=[types.Tool(code_execution=types.ToolCodeExecution())],
     )
 
-    response = client.generate_content(
-        model=model_name, contents=[full_prompt], config=config,
+    response = await client.generate_content(
+        model=model_name,
+        contents=[full_prompt],
+        config=config,
     )
 
     return {"response": response.text, "model": model_name}

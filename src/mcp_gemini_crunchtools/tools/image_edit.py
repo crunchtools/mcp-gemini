@@ -1,5 +1,6 @@
 """Multi-turn image editing session tools."""
 
+import asyncio
 import time
 import uuid
 from typing import Any
@@ -12,7 +13,7 @@ from .._image_utils import (
     extract_text_from_response,
     save_generated_image,
 )
-from ..client import get_client
+from ..client import GeminiClient, get_client
 from ..errors import SessionNotFoundError
 from ..models import validate_file_exists
 
@@ -24,11 +25,31 @@ def _cleanup_stale_sessions() -> None:
     """Remove sessions older than timeout."""
     now = time.time()
     stale = [
-        sid for sid, s in _sessions.items()
-        if now - s["last_active"] > SESSION_TIMEOUT_SECONDS
+        sid for sid, s in _sessions.items() if now - s["last_active"] > SESSION_TIMEOUT_SECONDS
     ]
     for sid in stale:
         del _sessions[sid]
+
+
+async def _send_turn(client: GeminiClient, session: dict[str, Any], contents: list[Any]) -> Any:
+    """Send one chat turn, never overlapping another turn on the same session.
+
+    The client runs the SDK call in a worker thread, which a cancelled caller does not
+    stop. So the lock is released when the worker finishes rather than when
+    the caller leaves, and the caller awaits it through a shield. Waiters
+    queue on the event loop, not in the shared thread pool.
+    """
+    lock: asyncio.Lock = session["lock"]
+    await lock.acquire()
+    try:
+        turn = asyncio.ensure_future(client.send_chat_turn(session["chat"], contents))
+    except BaseException:
+        lock.release()
+        raise
+    # shield marks the worker's error retrieved if the caller is cancelled,
+    # so an abandoned turn that fails is not reported as never retrieved.
+    turn.add_done_callback(lambda _: lock.release())
+    return await asyncio.shield(turn)
 
 
 async def gemini_start_image_edit(
@@ -68,19 +89,22 @@ async def gemini_start_image_edit(
         file_path = validate_file_exists(file_path)
         contents.append(Image.open(file_path))
 
-    response = chat.send_message(contents)
+    response = await client.send_chat_turn(chat, contents)
 
     image_data = extract_image_from_response(response)
     output_path = None
     if image_data:
         output_path = save_generated_image(
-            image_data[0], client.output_dir, prefix="edit_start",
+            image_data[0],
+            client.output_dir,
+            prefix="edit_start",
         )
 
     text = extract_text_from_response(response)
 
     _sessions[session_id] = {
         "chat": chat,
+        "lock": asyncio.Lock(),
         "last_active": time.time(),
         "turn_count": 1,
         "images": [str(output_path)] if output_path else [],
@@ -113,16 +137,19 @@ async def gemini_continue_image_edit(
         raise SessionNotFoundError(session_id)
 
     session = _sessions[session_id]
-    chat = session["chat"]
-
-    response = chat.send_message([prompt])
+    # Stamped before the turn: other requests run while it is in flight, and
+    # their stale-session sweep must not remove a session that is mid-turn.
+    session["last_active"] = time.time()
+    client = get_client()
+    response = await _send_turn(client, session, [prompt])
 
     image_data = extract_image_from_response(response)
     output_path = None
     if image_data:
-        client = get_client()
         output_path = save_generated_image(
-            image_data[0], client.output_dir, prefix="edit_continue",
+            image_data[0],
+            client.output_dir,
+            prefix="edit_continue",
         )
         session["images"].append(str(output_path))
 
@@ -171,11 +198,13 @@ async def gemini_list_image_sessions() -> dict[str, Any]:
 
     sessions = []
     for sid, session in _sessions.items():
-        sessions.append({
-            "session_id": sid,
-            "turn_count": session["turn_count"],
-            "image_count": len(session["images"]),
-            "last_active_seconds_ago": int(time.time() - session["last_active"]),
-        })
+        sessions.append(
+            {
+                "session_id": sid,
+                "turn_count": session["turn_count"],
+                "image_count": len(session["images"]),
+                "last_active_seconds_ago": int(time.time() - session["last_active"]),
+            }
+        )
 
     return {"sessions": sessions, "count": len(sessions)}

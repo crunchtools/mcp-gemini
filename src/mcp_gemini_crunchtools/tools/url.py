@@ -37,8 +37,10 @@ async def gemini_analyze_url(
 
     config = types.GenerateContentConfig(**config_kwargs) if config_kwargs else None
 
-    response = client.generate_content(
-        model=model_name, contents=[prompt], config=config,
+    response = await client.generate_content(
+        model=model_name,
+        contents=[prompt],
+        config=config,
     )
 
     return {"response": response.text, "model": model_name, "urls": urls}
@@ -67,7 +69,9 @@ async def gemini_compare_urls(
         "Provide a detailed comparison highlighting similarities and differences."
     )
     return await gemini_analyze_url(
-        urls=[url1, url2], question=prompt, model=model,
+        urls=[url1, url2],
+        question=prompt,
+        model=model,
     )
 
 
@@ -93,5 +97,7 @@ async def gemini_extract_from_url(
         prompt += f"\n\nSpecifically extract these fields: {custom_fields}"
 
     return await gemini_analyze_url(
-        urls=[url], question=prompt, model=model,
+        urls=[url],
+        question=prompt,
+        model=model,
     )

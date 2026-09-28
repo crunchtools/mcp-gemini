@@ -4,6 +4,7 @@ Every tool gets at least one test with mocked google-genai SDK calls.
 No live API calls, no API keys required.
 """
 
+import asyncio
 import time
 from unittest.mock import MagicMock, patch
 
@@ -205,6 +206,7 @@ class TestImageEditTools:
         session_id = "edit-test123"
         _sessions[session_id] = {
             "chat": MagicMock(),
+            "lock": asyncio.Lock(),
             "last_active": time.time(),
             "turn_count": 1,
             "images": [],
@@ -222,6 +224,7 @@ class TestImageEditTools:
         session_id = "edit-endtest"
         _sessions[session_id] = {
             "chat": MagicMock(),
+            "lock": asyncio.Lock(),
             "last_active": time.time(),
             "turn_count": 3,
             "images": ["/fake/path.png"],
@@ -290,7 +293,7 @@ class TestSearchTools:
 class TestDocumentTools:
     """Tests for analyze_document, summarize_pdf, extract_tables."""
 
-    @patch("mcp_gemini_crunchtools.tools.document.os.path.getsize")
+    @patch("mcp_gemini_crunchtools.models.os.path.getsize")
     @patch("mcp_gemini_crunchtools.tools.document.validate_file_exists")
     @patch("mcp_gemini_crunchtools.tools.document.get_client")
     async def test_gemini_analyze_document(
@@ -310,7 +313,7 @@ class TestDocumentTools:
         result = await gemini_analyze_document(file_path="/fake/doc.pdf")
         assert result["response"] == "doc analysis"
 
-    @patch("mcp_gemini_crunchtools.tools.document.os.path.getsize")
+    @patch("mcp_gemini_crunchtools.models.os.path.getsize")
     @patch("mcp_gemini_crunchtools.tools.document.validate_file_exists")
     @patch("mcp_gemini_crunchtools.tools.document.get_client")
     async def test_gemini_summarize_pdf(
@@ -330,7 +333,7 @@ class TestDocumentTools:
         result = await gemini_summarize_pdf(file_path="/fake/doc.pdf")
         assert result["response"] == "pdf summary"
 
-    @patch("mcp_gemini_crunchtools.tools.document.os.path.getsize")
+    @patch("mcp_gemini_crunchtools.models.os.path.getsize")
     @patch("mcp_gemini_crunchtools.tools.document.validate_file_exists")
     @patch("mcp_gemini_crunchtools.tools.document.get_client")
     async def test_gemini_extract_tables(
@@ -399,7 +402,7 @@ class TestVideoTools:
         mock_client = mock_gemini_client()
         mock_op = MagicMock()
         mock_op.name = "operations/video-123"
-        mock_client.client.models.generate_videos.return_value = mock_op
+        mock_client.generate_videos.return_value = mock_op
         mock_get_client.return_value = mock_client
 
         result = await gemini_generate_video(prompt="a sunset timelapse")
@@ -416,7 +419,7 @@ class TestVideoTools:
         mock_video = MagicMock()
         mock_video.video.uri = "gs://bucket/video.mp4"
         mock_op.response.generated_videos = [mock_video]
-        mock_client.client.operations.get_videos_operation.return_value = mock_op
+        mock_client.get_videos_operation.return_value = mock_op
         mock_get_client.return_value = mock_client
 
         result = await gemini_check_video(operation_name="op-123")
@@ -429,7 +432,7 @@ class TestVideoTools:
         mock_client = mock_gemini_client()
         mock_op = MagicMock()
         mock_op.done = False
-        mock_client.client.operations.get_videos_operation.return_value = mock_op
+        mock_client.get_videos_operation.return_value = mock_op
         mock_get_client.return_value = mock_client
 
         result = await gemini_check_video(operation_name="op-456")
@@ -571,7 +574,7 @@ class TestCacheTools:
         mock_client = mock_gemini_client()
         mock_cache = MagicMock()
         mock_cache.name = "caches/abc123"
-        mock_client.client.caches.create.return_value = mock_cache
+        mock_client.create_cache.return_value = mock_cache
         mock_get_client.return_value = mock_client
 
         result = await gemini_create_cache(content="test content", display_name="test-cache")
@@ -594,7 +597,7 @@ class TestCacheTools:
         from mcp_gemini_crunchtools.tools.cache import gemini_list_caches
 
         mock_client = mock_gemini_client()
-        mock_client.client.caches.list.return_value = []
+        mock_client.list_caches.return_value = []
         mock_get_client.return_value = mock_client
 
         result = await gemini_list_caches()

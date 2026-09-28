@@ -38,8 +38,10 @@ async def gemini_structured(
 
     config = types.GenerateContentConfig(**config_kwargs)
 
-    response = client.generate_content(
-        model=model_name, contents=[prompt], config=config,
+    response = await client.generate_content(
+        model=model_name,
+        contents=[prompt],
+        config=config,
     )
 
     return {"response": response.text, "model": model_name}
