@@ -88,6 +88,24 @@ async def test_sdk_errors_surface_as_gemini_api_error(method: str) -> None:
         await getattr(client, method)(**CALL_ARGS[method])
 
 
+async def test_send_chat_turn_runs_off_the_loop_and_maps_errors() -> None:
+    client = GeminiClient()
+
+    def slow_send(contents: list[str]) -> str:
+        time.sleep(0.5)
+        return f"sent {contents[0]}"
+
+    started = time.monotonic()
+    call = asyncio.create_task(client.send_chat_turn(MagicMock(send_message=slow_send), ["a"]))
+    await asyncio.sleep(0.05)
+    assert time.monotonic() - started < 0.3
+    assert await call == "sent a"
+
+    failing = MagicMock(send_message=MagicMock(side_effect=RuntimeError("boom")))
+    with pytest.raises(GeminiApiError, match="boom"):
+        await client.send_chat_turn(failing, ["a"])
+
+
 def test_sdk_client_carries_timeout_and_size_limit() -> None:
     options = GeminiClient().client._api_client._http_options
     assert options.timeout == HTTP_TIMEOUT_MS
