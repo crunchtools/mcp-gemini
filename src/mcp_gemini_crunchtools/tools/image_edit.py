@@ -34,7 +34,7 @@ def _cleanup_stale_sessions() -> None:
 async def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
     """Send one chat turn, never overlapping another turn on the same session.
 
-    The SDK call runs in a worker thread, which a cancelled caller does not
+    The client runs the SDK call in a worker thread, which a cancelled caller does not
     stop. So the lock is released when the worker finishes rather than when
     the caller leaves, and the caller awaits it through a shield. Waiters
     queue on the event loop, not in the shared thread pool.
@@ -42,7 +42,7 @@ async def _send_turn(session: dict[str, Any], contents: list[Any]) -> Any:
     lock: asyncio.Lock = session["lock"]
     await lock.acquire()
     try:
-        turn = asyncio.ensure_future(asyncio.to_thread(session["chat"].send_message, contents))
+        turn = asyncio.ensure_future(get_client().send_chat_turn(session["chat"], contents))
     except BaseException:
         lock.release()
         raise
@@ -89,7 +89,7 @@ async def gemini_start_image_edit(
         file_path = validate_file_exists(file_path)
         contents.append(Image.open(file_path))
 
-    response = await asyncio.to_thread(chat.send_message, contents)
+    response = await client.send_chat_turn(chat, contents)
 
     image_data = extract_image_from_response(response)
     output_path = None

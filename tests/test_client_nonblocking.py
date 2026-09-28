@@ -79,6 +79,9 @@ def test_sdk_client_carries_timeout_and_size_limit() -> None:
     options = GeminiClient().client._api_client._http_options
     assert options.timeout == HTTP_TIMEOUT_MS
     assert _reject_oversized in options.client_args["event_hooks"]["response"]
+    # The size limit counts wire bytes, so it only bounds what the SDK reads
+    # while responses arrive uncompressed.
+    assert options.headers["Accept-Encoding"] == "identity"
 
 
 def test_oversized_response_is_refused() -> None:
@@ -242,7 +245,7 @@ async def test_failed_turn_reaches_its_awaiter() -> None:
         "turn_count": 1,
         "images": [],
     }
-    with pytest.raises(RuntimeError, match="upstream failed"):
+    with pytest.raises(GeminiApiError, match="upstream failed"):
         await image_edit.gemini_continue_image_edit("edit-w", "a")
     assert not lock.locked()
 

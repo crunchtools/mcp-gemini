@@ -132,9 +132,11 @@ def mock_gemini_client(**overrides: Any) -> MagicMock:
         "delete_cache",
         "generate_videos",
         "get_videos_operation",
+        "send_chat_turn",
     ):
         setattr(mock_client, method, AsyncMock())
     mock_client.generate_content.return_value = mock_generate_response()
+    mock_client.send_chat_turn.side_effect = lambda chat, contents: chat.send_message(contents)
     mock_client.generate_images.return_value = None
     mock_client.create_chat.return_value = MagicMock()
     mock_client.upload_file.return_value = MagicMock()

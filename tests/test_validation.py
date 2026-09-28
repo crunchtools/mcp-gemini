@@ -61,6 +61,12 @@ class TestValidateUploadSize:
         small.write_bytes(b"x" * 10)
         validate_upload_size(str(small))
 
+    def test_file_at_exact_limit_accepted(self, tmp_path: Path) -> None:
+        edge = tmp_path / "edge.pdf"
+        with edge.open("wb") as f:
+            f.truncate(MAX_DOCUMENT_SIZE_BYTES)
+        validate_upload_size(str(edge))
+
     def test_oversized_file_rejected(self, tmp_path: Path) -> None:
         big = tmp_path / "big.pdf"
         with big.open("wb") as f:

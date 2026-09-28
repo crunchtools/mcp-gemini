@@ -8,7 +8,7 @@ import asyncio
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 from google import genai
@@ -165,6 +165,24 @@ class GeminiClient:
         """
         return self._client.chats.create(model=model, config=config)
 
+    async def send_chat_turn(self, chat: Any, contents: list[Any]) -> Any:
+        """Send one message on a chat session from create_chat.
+
+        Args:
+            chat: The SDK chat session.
+            contents: Message parts.
+
+        Returns:
+            The generate content response.
+
+        Raises:
+            GeminiApiError: On API errors.
+        """
+        try:
+            return await asyncio.to_thread(chat.send_message, contents)
+        except Exception as e:
+            _handle_genai_error(e)
+
     async def upload_file(self, file_path: str) -> Any:
         """Upload a file to Gemini for use in generation.
 
@@ -230,7 +248,6 @@ class GeminiClient:
             return await asyncio.to_thread(lambda: list(self._client.caches.list()))
         except Exception as e:
             _handle_genai_error(e)
-            raise
 
     async def delete_cache(self, name: str) -> None:
         """Delete a content cache.
@@ -269,7 +286,7 @@ class GeminiClient:
             _handle_genai_error(e)
 
 
-def _handle_genai_error(e: Exception) -> None:
+def _handle_genai_error(e: Exception) -> NoReturn:
     """Convert google-genai exceptions to UserError subclasses.
 
     Args:
