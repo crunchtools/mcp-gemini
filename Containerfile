@@ -41,7 +41,7 @@ FROM quay.io/hummingbird/python:latest
 
 # Labels for container metadata
 LABEL name="mcp-gemini-crunchtools" \
-      version="0.3.0" \
+      version="0.3.1" \
       summary="MCP server for Google Gemini AI" \
       description="A security-focused MCP server for Google Gemini AI built on Red Hat UBI" \
       maintainer="crunchtools.com" \
