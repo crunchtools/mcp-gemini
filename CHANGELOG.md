@@ -8,8 +8,26 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-10
+
+### Added
+
+- The 20 tools that only read publish `readOnlyHint: true`. A gateway uses it
+  to decide whether an invalid optional argument may be dropped or must refuse
+  the call (crunchtools/constitution#35). Every tool here is a paid model
+  call, so the line is drawn at one `generateContent`, `countTokens` or list
+  request that writes nothing to the output directory and stores nothing with
+  Google. Tools that generate images, audio or video, upload through the Files
+  API, create or delete a cache, run code, or start or poll a long-running
+  operation stay unannotated.
+- Tests pin every registered tool into `READ_ONLY` or `WRITES`, and check with
+  a mocked client that each read-only tool makes at most one such request,
+  uses no upload, cache or code execution, and creates no file.
+
 ### Changed
 
+- Inherits constitution v1.22.0; the workflow pins and the pre-commit hook rev
+  move with it.
 - Constitution is now a v1.18.0 manifest: it holds only what is specific to
   this repo; fleet and profile rules apply by reference.
 - Constitution validation is pinned to the inherited release via

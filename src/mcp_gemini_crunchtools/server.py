@@ -52,9 +52,15 @@ from .tools import (
 
 logger = logging.getLogger(__name__)
 
+# A gateway drops an invalid optional argument only on a tool annotated read-only;
+# on anything else it refuses the call. Only tools that change nothing get this:
+# one generateContent, countTokens or list request, nothing written to the output
+# directory, nothing stored with Google (Files API, caches), no code execution.
+READ_ONLY = {"readOnlyHint": True}
+
 mcp = FastMCP(
     name="mcp-gemini-crunchtools",
-    version="0.3.1",
+    version="0.4.0",
     instructions=(
         "Secure MCP server for Google Gemini AI - text, image, video, research, and more. "
         "Generated files (images, audio, video) are saved to the output directory. "
@@ -70,7 +76,7 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_query_tool(
     prompt: str,
     model: str = "flash",
@@ -93,7 +99,7 @@ async def gemini_query_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_brainstorm_tool(
     topic: str,
     context: str | None = None,
@@ -116,7 +122,7 @@ async def gemini_brainstorm_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_analyze_code_tool(
     code: str,
     language: str | None = None,
@@ -139,7 +145,7 @@ async def gemini_analyze_code_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_analyze_text_tool(
     text: str,
     analysis_type: str = "general",
@@ -159,7 +165,7 @@ async def gemini_analyze_text_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_summarize_tool(
     content: str,
     format: str = "paragraph",
@@ -230,7 +236,7 @@ async def gemini_generate_image_with_input_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_image_prompt_tool(
     description: str,
     style: str | None = None,
@@ -340,7 +346,7 @@ async def gemini_list_image_sessions_tool() -> dict[str, Any]:
     return await gemini_list_image_sessions()
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_analyze_image_tool(
     image_path: str,
     query: str = "Describe this image in detail.",
@@ -360,7 +366,7 @@ async def gemini_analyze_image_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_search_tool(
     query: str,
     model: str = "flash",
@@ -434,7 +440,7 @@ async def gemini_extract_tables_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_analyze_url_tool(
     urls: list[str],
     question: str = "Analyze the content of these URLs.",
@@ -457,7 +463,7 @@ async def gemini_analyze_url_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_compare_urls_tool(
     url1: str,
     url2: str,
@@ -480,7 +486,7 @@ async def gemini_compare_urls_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_extract_from_url_tool(
     url: str,
     data_type: str = "text",
@@ -534,7 +540,7 @@ async def gemini_check_video_tool(
     return await gemini_check_video(operation_name=operation_name)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_youtube_tool(
     url: str,
     question: str = "Analyze this video and provide key insights.",
@@ -550,7 +556,7 @@ async def gemini_youtube_tool(
     return await gemini_youtube(url=url, question=question, model=model)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_youtube_summary_tool(
     url: str,
     style: str = "concise",
@@ -596,7 +602,7 @@ async def gemini_dialogue_tool(
     return await gemini_dialogue(text=text, voice1=voice1, voice2=voice2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_list_voices_tool() -> dict[str, Any]:
     """List available voices for text-to-speech."""
     return await gemini_list_voices()
@@ -628,7 +634,7 @@ async def gemini_check_research_tool(
     return await gemini_check_research(research_id=research_id)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_research_followup_tool(
     research_id: str,
     question: str,
@@ -676,7 +682,7 @@ async def gemini_create_cache_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_query_cache_tool(
     cache_name: str,
     question: str,
@@ -693,7 +699,7 @@ async def gemini_query_cache_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_list_caches_tool() -> dict[str, Any]:
     """List all active content caches."""
     return await gemini_list_caches()
@@ -711,7 +717,7 @@ async def gemini_delete_cache_tool(
     return await gemini_delete_cache(cache_name=cache_name)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_structured_tool(
     prompt: str,
     schema: dict[str, Any] | None = None,
@@ -734,7 +740,7 @@ async def gemini_structured_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_extract_tool(
     text: str,
     extract_type: str = "entities",
@@ -757,7 +763,7 @@ async def gemini_extract_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_count_tokens_tool(
     content: str,
     model: str = "flash",

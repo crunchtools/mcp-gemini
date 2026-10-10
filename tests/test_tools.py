@@ -5,11 +5,20 @@ No live API calls, no API keys required.
 """
 
 import asyncio
+import io
 import time
+from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PIL import Image
 
+from mcp_gemini_crunchtools import client as client_module
+from mcp_gemini_crunchtools.client import GeminiClient
+from mcp_gemini_crunchtools.server import mcp
+from mcp_gemini_crunchtools.tools.image_edit import _sessions
+from mcp_gemini_crunchtools.tools.research import _research_ops
 from tests.conftest import (
     mock_audio_response,
     mock_gemini_client,
@@ -28,6 +37,225 @@ async def test_tool_count() -> None:
         f"Expected {EXPECTED_TOOL_COUNT} tools, found {len(tools)}. "
         f"Tools: {sorted(t.name for t in tools)}"
     )
+
+
+READ_ONLY = frozenset(
+    {
+        "gemini_query_tool",
+        "gemini_brainstorm_tool",
+        "gemini_analyze_code_tool",
+        "gemini_analyze_text_tool",
+        "gemini_summarize_tool",
+        "gemini_image_prompt_tool",
+        "gemini_analyze_image_tool",
+        "gemini_search_tool",
+        "gemini_analyze_url_tool",
+        "gemini_compare_urls_tool",
+        "gemini_extract_from_url_tool",
+        "gemini_youtube_tool",
+        "gemini_youtube_summary_tool",
+        "gemini_list_voices_tool",
+        "gemini_research_followup_tool",
+        "gemini_query_cache_tool",
+        "gemini_list_caches_tool",
+        "gemini_structured_tool",
+        "gemini_extract_tool",
+        "gemini_count_tokens_tool",
+    }
+)
+WRITES = frozenset(
+    {
+        # Write a generated file to the output directory.
+        "gemini_generate_image_tool",
+        "gemini_generate_image_with_input_tool",
+        "gemini_imagen_generate_tool",
+        "gemini_start_image_edit_tool",
+        "gemini_continue_image_edit_tool",
+        "gemini_speak_tool",
+        "gemini_dialogue_tool",
+        # Change the server's session table; the list sweeps expired sessions.
+        "gemini_end_image_edit_tool",
+        "gemini_list_image_sessions_tool",
+        # Upload through the Files API.
+        "gemini_analyze_document_tool",
+        "gemini_summarize_pdf_tool",
+        "gemini_extract_tables_tool",
+        # Start or poll a long-running operation.
+        "gemini_generate_video_tool",
+        "gemini_check_video_tool",
+        "gemini_deep_research_tool",
+        "gemini_check_research_tool",
+        # Create or delete a cache stored with Google.
+        "gemini_create_cache_tool",
+        "gemini_delete_cache_tool",
+        # Runs code the caller describes.
+        "gemini_run_code_tool",
+    }
+)
+
+# Stands in for the path of an image that exists on disk.
+INPUT_IMAGE = "<input image>"
+SEEDED_RESEARCH = "research-seeded"
+
+# The only client calls a read-only tool may make, and only one of them.
+ONE_REQUEST = frozenset({"generate_content", "count_tokens", "list_caches"})
+
+# Arguments for each read-only tool, and the client calls it is expected to make.
+READ_ONLY_CALLS: dict[str, tuple[dict[str, Any], list[str]]] = {
+    "gemini_query_tool": ({"prompt": "hi", "use_google_search": True}, ["generate_content"]),
+    "gemini_brainstorm_tool": ({"topic": "containers"}, ["generate_content"]),
+    "gemini_analyze_code_tool": ({"code": "print('hi')"}, ["generate_content"]),
+    "gemini_analyze_text_tool": ({"text": "some text"}, ["generate_content"]),
+    "gemini_summarize_tool": ({"content": "long content"}, ["generate_content"]),
+    "gemini_image_prompt_tool": ({"description": "a mountain"}, ["generate_content"]),
+    "gemini_analyze_image_tool": ({"image_path": INPUT_IMAGE}, ["generate_content"]),
+    "gemini_search_tool": ({"query": "podman"}, ["generate_content"]),
+    "gemini_analyze_url_tool": ({"urls": ["https://example.com"]}, ["generate_content"]),
+    "gemini_compare_urls_tool": (
+        {"url1": "https://example.com", "url2": "https://example.org"},
+        ["generate_content"],
+    ),
+    "gemini_extract_from_url_tool": ({"url": "https://example.com"}, ["generate_content"]),
+    "gemini_youtube_tool": ({"url": "https://youtu.be/x"}, ["generate_content"]),
+    "gemini_youtube_summary_tool": ({"url": "https://youtu.be/x"}, ["generate_content"]),
+    # Returns a constant list; no request at all.
+    "gemini_list_voices_tool": ({}, []),
+    "gemini_research_followup_tool": (
+        {"research_id": SEEDED_RESEARCH, "question": "and then?"},
+        ["generate_content"],
+    ),
+    "gemini_query_cache_tool": (
+        {"cache_name": "cachedContents/abc", "question": "what?"},
+        ["generate_content"],
+    ),
+    "gemini_list_caches_tool": ({}, ["list_caches"]),
+    "gemini_structured_tool": (
+        {"prompt": "list fruit", "use_google_search": True},
+        ["generate_content"],
+    ),
+    "gemini_extract_tool": ({"text": "Ann, 2026-10-10"}, ["generate_content"]),
+    "gemini_count_tokens_tool": ({"content": "some text"}, ["count_tokens"]),
+}
+
+# Unannotated tools and the violation each must produce, so the check is known to fire.
+WRITE_CONTROLS: dict[str, tuple[dict[str, Any], str]] = {
+    "gemini_generate_image_tool": ({"prompt": "a sunset"}, "created file"),
+    "gemini_speak_tool": ({"text": "hello"}, "created file"),
+    "gemini_run_code_tool": ({"prompt": "sum 1..10"}, "code execution"),
+    "gemini_analyze_document_tool": ({"file_path": INPUT_IMAGE}, "upload_file"),
+    "gemini_create_cache_tool": ({"content": "cache me"}, "create_cache"),
+    "gemini_delete_cache_tool": ({"cache_name": "cachedContents/abc"}, "delete_cache"),
+    "gemini_deep_research_tool": ({"query": "history of podman"}, "research state"),
+}
+
+
+def _png_bytes() -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (2, 2)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _spy_client(output_dir: Path) -> MagicMock:
+    """A GeminiClient double whose responses carry text and an inline PNG.
+
+    A tool that saves what it gets back therefore does write a file.
+    """
+    text_part = MagicMock(text="ok", inline_data=None)
+    image_part = MagicMock(text=None)
+    image_part.inline_data.data = _png_bytes()
+    image_part.inline_data.mime_type = "image/png"
+    candidate = MagicMock()
+    candidate.content.parts = [text_part, image_part]
+    response = MagicMock(text="ok", candidates=[candidate])
+
+    spy = MagicMock(spec=GeminiClient)
+    spy.output_dir = output_dir
+    spy.generate_content.return_value = response
+    spy.send_chat_turn.return_value = response
+    spy.generate_images.return_value = None
+    spy.count_tokens.return_value = MagicMock(total_tokens=3)
+    spy.list_caches.return_value = []
+    spy.create_cache.return_value = MagicMock()
+    return spy
+
+
+async def _observe(
+    name: str,
+    args: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[list[str], list[str]]:
+    """Call a tool through the registry; return its client calls and what it changed."""
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    image = tmp_path / "input.png"
+    image.write_bytes(_png_bytes())
+    spy = _spy_client(output_dir)
+    monkeypatch.setattr(client_module, "_client", spy)
+    _research_ops[SEEDED_RESEARCH] = {
+        "query": "q",
+        "response": MagicMock(text="findings"),
+        "started": 0.0,
+    }
+    sessions_before = set(_sessions)
+
+    await mcp.call_tool(name, {k: str(image) if v is INPUT_IMAGE else v for k, v in args.items()})
+
+    calls = [call[0] for call in spy.method_calls]
+    violations = [f"calls {call}" for call in calls if call not in ONE_REQUEST]
+    if len(calls) > 1:
+        violations.append(f"makes {len(calls)} requests")
+    for call in spy.generate_content.await_args_list:
+        config = call.kwargs.get("config")
+        for tool in config.tools if config is not None and config.tools else []:
+            if tool.code_execution is not None:
+                violations.append("code execution")
+    for path in sorted(tmp_path.rglob("*")):
+        if path.is_file() and path != image:
+            violations.append(f"created file {path.relative_to(tmp_path)}")
+    if set(_research_ops) != {SEEDED_RESEARCH}:
+        violations.append("research state changed")
+    if set(_sessions) != sessions_before:
+        violations.append("session state changed")
+    return calls, violations
+
+
+class TestReadOnlyAnnotation:
+    """Every registered tool is classified, and the reads really only read."""
+
+    async def test_every_tool_is_classified(self) -> None:
+        tools = await mcp.list_tools()
+        assert READ_ONLY.isdisjoint(WRITES)
+        assert {tool.name for tool in tools} == READ_ONLY | WRITES
+        annotated = {
+            tool.name
+            for tool in tools
+            if tool.annotations is not None
+            and tool.annotations.model_dump(by_alias=True).get("readOnlyHint") is True
+        }
+        assert annotated == READ_ONLY
+
+    def test_every_read_only_tool_is_exercised(self) -> None:
+        assert set(READ_ONLY_CALLS) == READ_ONLY
+        assert set(WRITE_CONTROLS) <= WRITES
+
+    @pytest.mark.parametrize("name", sorted(READ_ONLY))
+    async def test_read_only_tool_makes_one_request_and_writes_nothing(
+        self, name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """One generate, count or list call; no upload, cache, code run or file."""
+        args, expected_calls = READ_ONLY_CALLS[name]
+        calls, violations = await _observe(name, args, tmp_path, monkeypatch)
+        assert violations == []
+        assert calls == expected_calls
+
+    @pytest.mark.parametrize("name", sorted(WRITE_CONTROLS))
+    async def test_unannotated_tool_trips_the_check(
+        self, name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        args, expected = WRITE_CONTROLS[name]
+        _, violations = await _observe(name, args, tmp_path, monkeypatch)
+        assert any(expected in violation for violation in violations), violations
 
 
 class TestQueryTools:
