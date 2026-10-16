@@ -528,7 +528,7 @@ async def gemini_generate_video_tool(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_check_video_tool(
     operation_name: str,
 ) -> dict[str, Any]:
@@ -615,6 +615,7 @@ async def gemini_deep_research_tool(
     """Start a deep research task using a specialized Gemini model.
 
     Performs multi-step web research to answer complex questions.
+    Completes in a single call; the result is returned immediately.
 
     Args:
         query: The research question or topic.
@@ -622,7 +623,7 @@ async def gemini_deep_research_tool(
     return await gemini_deep_research(query=query)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def gemini_check_research_tool(
     research_id: str,
 ) -> dict[str, Any]:
