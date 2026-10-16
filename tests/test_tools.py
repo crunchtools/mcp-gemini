@@ -61,6 +61,8 @@ READ_ONLY = frozenset(
         "gemini_structured_tool",
         "gemini_extract_tool",
         "gemini_count_tokens_tool",
+        "gemini_check_video_tool",
+        "gemini_check_research_tool",
     }
 )
 WRITES = frozenset(
@@ -80,11 +82,9 @@ WRITES = frozenset(
         "gemini_analyze_document_tool",
         "gemini_summarize_pdf_tool",
         "gemini_extract_tables_tool",
-        # Start or poll a long-running operation.
+        # Start a long-running operation or store research state.
         "gemini_generate_video_tool",
-        "gemini_check_video_tool",
         "gemini_deep_research_tool",
-        "gemini_check_research_tool",
         # Create or delete a cache stored with Google.
         "gemini_create_cache_tool",
         "gemini_delete_cache_tool",
@@ -98,7 +98,7 @@ INPUT_IMAGE = "<input image>"
 SEEDED_RESEARCH = "research-seeded"
 
 # The only client calls a read-only tool may make, and only one of them.
-ONE_REQUEST = frozenset({"generate_content", "count_tokens", "list_caches"})
+ONE_REQUEST = frozenset({"generate_content", "count_tokens", "list_caches", "get_videos_operation"})
 
 # Arguments for each read-only tool, and the client calls it is expected to make.
 READ_ONLY_CALLS: dict[str, tuple[dict[str, Any], list[str]]] = {
@@ -135,6 +135,9 @@ READ_ONLY_CALLS: dict[str, tuple[dict[str, Any], list[str]]] = {
     ),
     "gemini_extract_tool": ({"text": "Ann, 2026-10-10"}, ["generate_content"]),
     "gemini_count_tokens_tool": ({"content": "some text"}, ["count_tokens"]),
+    "gemini_check_video_tool": ({"operation_name": "operations/abc"}, ["get_videos_operation"]),
+    # Reads the stored research; no request at all.
+    "gemini_check_research_tool": ({"research_id": SEEDED_RESEARCH}, []),
 }
 
 # Unannotated tools and the violation each must produce, so the check is known to fire.
@@ -174,6 +177,7 @@ def _spy_client(output_dir: Path) -> MagicMock:
     spy.send_chat_turn.return_value = response
     spy.generate_images.return_value = None
     spy.count_tokens.return_value = MagicMock(total_tokens=3)
+    spy.get_videos_operation.return_value = MagicMock(done=False)
     spy.list_caches.return_value = []
     spy.create_cache.return_value = MagicMock()
     return spy
@@ -256,6 +260,54 @@ class TestReadOnlyAnnotation:
         args, expected = WRITE_CONTROLS[name]
         _, violations = await _observe(name, args, tmp_path, monkeypatch)
         assert any(expected in violation for violation in violations), violations
+
+
+class TestIssue40:
+    """Unique research IDs, image config pass-through, YouTube file_data part."""
+
+    @patch("mcp_gemini_crunchtools.tools.research.get_client")
+    async def test_research_ids_are_unique_within_a_second(
+        self, mock_get_client: MagicMock
+    ) -> None:
+        from mcp_gemini_crunchtools.tools.research import gemini_deep_research
+
+        mock_client = mock_gemini_client()
+        mock_client.generate_content.return_value = mock_generate_response("r")
+        mock_get_client.return_value = mock_client
+
+        with patch("mcp_gemini_crunchtools.tools.research.time.time", return_value=1000.0):
+            first = await gemini_deep_research(query="a")
+            second = await gemini_deep_research(query="b")
+        assert first["research_id"] != second["research_id"]
+
+    @patch("mcp_gemini_crunchtools.tools.image_gen.get_client")
+    async def test_generate_image_passes_image_config(
+        self, mock_get_client: MagicMock, tmp_path: Path
+    ) -> None:
+        from mcp_gemini_crunchtools.tools.image_gen import gemini_generate_image
+
+        spy = _spy_client(tmp_path)
+        mock_get_client.return_value = spy
+
+        await gemini_generate_image(prompt="a sunset", aspect_ratio="16:9", image_size="4K")
+        config = spy.generate_content.await_args.kwargs["config"]
+        assert config.image_config.aspect_ratio == "16:9"
+        assert config.image_config.image_size == "4K"
+
+    @patch("mcp_gemini_crunchtools.tools.youtube.get_client")
+    async def test_youtube_attaches_video_as_file_data(self, mock_get_client: MagicMock) -> None:
+        from mcp_gemini_crunchtools.tools.youtube import gemini_youtube
+
+        mock_client = mock_gemini_client()
+        mock_client.generate_content.return_value = mock_generate_response("ok")
+        mock_get_client.return_value = mock_client
+
+        url = "https://youtu.be/x"
+        await gemini_youtube(url=url, question="what?")
+        contents = mock_client.generate_content.await_args.kwargs["contents"]
+        assert contents[0].file_data.file_uri == url
+        assert "what?" in contents
+        assert url not in contents[1:]
 
 
 class TestQueryTools:

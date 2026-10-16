@@ -8,6 +8,24 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+### Added
+
+- `gemini_check_video_tool` and `gemini_check_research_tool` publish
+  `readOnlyHint: true`.
+
+### Changed
+
+- The YouTube tools attach the video as a `file_data` part (`file_uri` is the
+  URL) instead of passing the URL as prompt text with search grounding.
+- `gemini_deep_research_tool` documents that it completes in a single call.
+
+### Fixed
+
+- `gemini_deep_research_tool` IDs use `uuid4`, so two calls in the same second
+  no longer collide.
+- `gemini_generate_image_tool` passes `aspect_ratio` and `image_size` to the
+  image config instead of ignoring them.
+
 ## [0.4.0] - 2026-10-10
 
 ### Added

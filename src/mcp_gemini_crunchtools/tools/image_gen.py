@@ -42,6 +42,7 @@ async def gemini_generate_image(
 
     config_kwargs: dict[str, Any] = {
         "response_modalities": ["TEXT", "IMAGE"],
+        "image_config": types.ImageConfig(aspect_ratio=aspect_ratio, image_size=image_size),
     }
 
     if use_google_search:

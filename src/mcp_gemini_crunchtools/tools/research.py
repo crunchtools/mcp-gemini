@@ -1,6 +1,7 @@
 """Deep research tools."""
 
 import time
+import uuid
 from typing import Any
 
 from ..client import get_client
@@ -14,7 +15,8 @@ async def gemini_deep_research(
     """Start a deep research task.
 
     Deep research uses a specialized Gemini model that performs
-    multi-step web research to answer complex questions.
+    multi-step web research to answer complex questions. It completes
+    in a single call; the result is returned immediately.
 
     Args:
         query: The research question or topic.
@@ -29,7 +31,7 @@ async def gemini_deep_research(
         contents=[query],
     )
 
-    op_id = f"research-{int(time.time())}"
+    op_id = f"research-{uuid.uuid4()}"
     _research_ops[op_id] = {
         "query": query,
         "response": response,

@@ -26,16 +26,11 @@ async def gemini_youtube(
     client = get_client()
     model_name = _resolve_model(model)
 
-    config = types.GenerateContentConfig(
-        tools=[types.Tool(google_search=types.GoogleSearch())],
-    )
-
-    prompt = f"{question}\n\nYouTube URL: {url}"
+    video_part = types.Part(file_data=types.FileData(file_uri=url))
 
     response = await client.generate_content(
         model=model_name,
-        contents=[prompt],
-        config=config,
+        contents=[video_part, question],
     )
 
     return {"response": response.text, "model": model_name, "url": url}
