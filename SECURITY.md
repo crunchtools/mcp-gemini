@@ -85,6 +85,7 @@ The API key is handled with multiple protections:
 ```python
 from pydantic import SecretStr
 
+
 class Config:
     def __init__(self):
         key = os.environ.get("GEMINI_API_KEY")
