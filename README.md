@@ -192,7 +192,7 @@ read only when it is unset.
 
 ```bash
 mkdir -p ~/.config/mcp-gemini && chmod 700 ~/.config/mcp-gemini
-( umask 077; read -rsp "Gemini API key: " key && printf '%s' "$key" > ~/.config/mcp-gemini/api-key; unset key )
+( umask 077; read -rsp "Gemini API key: " key && printf '%s' "$key" > ~/.config/mcp-gemini/api-key; rc=$?; unset key; exit $rc )
 
 claude mcp add mcp-gemini-crunchtools \
     --env GEMINI_API_KEY_FILE=$HOME/.config/mcp-gemini/api-key \
