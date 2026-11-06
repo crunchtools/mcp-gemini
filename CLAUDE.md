@@ -63,6 +63,19 @@ claude mcp add mcp-gemini-crunchtools \
        -- uvx mcp-gemini-crunchtools
    ```
 
+### Keeping the Key Out of Config (`GEMINI_API_KEY_FILE`)
+
+Instead of `--env GEMINI_API_KEY=...`, store the key in a `chmod 600` file and
+pass `--env GEMINI_API_KEY_FILE=$HOME/.config/mcp-gemini/api-key`. The file is
+read only when `GEMINI_API_KEY` is unset. For containers, mount it read-only:
+
+```bash
+podman run -i --rm \
+    -v ~/.config/mcp-gemini/api-key:/run/secrets/api-key:ro,z \
+    -e GEMINI_API_KEY_FILE=/run/secrets/api-key \
+    quay.io/crunchtools/mcp-gemini
+```
+
 ### Security Best Practices
 
 - **Never commit API keys**: Don't put keys in code or config files in git

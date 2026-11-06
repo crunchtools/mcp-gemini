@@ -17,10 +17,11 @@ os.environ.setdefault("GEMINI_API_KEY", "test-key-for-pytest")
 @pytest.fixture(autouse=True)
 def _reset_client_singleton() -> None:
     """Reset global singletons between tests to prevent state leakage."""
-    from mcp_gemini_crunchtools import client, config
+    from mcp_gemini_crunchtools import client, config, errors
 
     client._client = None
     config._config = None
+    errors._REGISTERED_SECRETS.clear()
 
     from mcp_gemini_crunchtools.tools.image_edit import _sessions
 

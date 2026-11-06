@@ -7,6 +7,12 @@
 # Run:
 #   podman run -i --rm -e GEMINI_API_KEY quay.io/crunchtools/mcp-gemini
 #
+# With the key as a mounted secret file (keeps it out of `podman inspect`):
+#   podman run -i --rm \
+#     -v ~/.config/mcp-gemini/api-key:/run/secrets/api-key:ro,z \
+#     -e GEMINI_API_KEY_FILE=/run/secrets/api-key \
+#     quay.io/crunchtools/mcp-gemini
+#
 # With shared volume (for generated images/audio and input files):
 #   mkdir -p ~/.local/share/mcp-uploads-downloads
 #   podman run -i --rm \

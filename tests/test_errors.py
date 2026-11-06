@@ -5,6 +5,7 @@ error messages, config repr, or exception strings.
 """
 
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -59,6 +60,69 @@ class TestConfigSafety:
             os.environ.pop("GEMINI_API_KEY", None)
             with pytest.raises(ConfigurationError, match="GEMINI_API_KEY"):
                 Config()
+
+    def test_key_from_file_only(self, tmp_path: Path) -> None:
+        from mcp_gemini_crunchtools.config import Config
+
+        key_file = tmp_path / "api-key"
+        key_file.write_text("AIzaSyFileKey\n")
+        env = {"GEMINI_API_KEY_FILE": str(key_file), "GEMINI_OUTPUT_DIR": str(tmp_path / "out")}
+        with patch.dict(os.environ, env, clear=True):
+            assert Config().api_key == "AIzaSyFileKey"
+
+    def test_env_wins_over_file(self, tmp_path: Path) -> None:
+        from mcp_gemini_crunchtools.config import Config
+
+        key_file = tmp_path / "api-key"
+        key_file.write_text("AIzaSyFileKey")
+        env = {
+            "GEMINI_API_KEY": "AIzaSyEnvKey",
+            "GEMINI_API_KEY_FILE": str(key_file),
+            "GEMINI_OUTPUT_DIR": str(tmp_path / "out"),
+        }
+        with patch.dict(os.environ, env, clear=True):
+            assert Config().api_key == "AIzaSyEnvKey"
+
+    def test_neither_set_names_both_options(self) -> None:
+        from mcp_gemini_crunchtools.config import Config
+        from mcp_gemini_crunchtools.errors import ConfigurationError
+
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ConfigurationError) as exc:
+            Config()
+        assert "GEMINI_API_KEY_FILE" in str(exc.value)
+        assert "GEMINI_API_KEY" in str(exc.value)
+
+    def test_missing_and_empty_file_raise_without_contents(self, tmp_path: Path) -> None:
+        from mcp_gemini_crunchtools.config import Config
+        from mcp_gemini_crunchtools.errors import ConfigurationError
+
+        missing = tmp_path / "nope"
+        with (
+            patch.dict(os.environ, {"GEMINI_API_KEY_FILE": str(missing)}, clear=True),
+            pytest.raises(ConfigurationError, match="nope"),
+        ):
+            Config()
+        empty = tmp_path / "empty"
+        empty.write_text("  \n")
+        with (
+            patch.dict(os.environ, {"GEMINI_API_KEY_FILE": str(empty)}, clear=True),
+            pytest.raises(ConfigurationError, match="empty"),
+        ):
+            Config()
+
+    def test_file_sourced_key_redacted_from_api_error(self, tmp_path: Path) -> None:
+        from mcp_gemini_crunchtools.config import Config
+
+        file_key = "AIzaSyFileKey777"
+        key_file = tmp_path / "api-key"
+        key_file.write_text(file_key)
+        env = {"GEMINI_API_KEY_FILE": str(key_file), "GEMINI_OUTPUT_DIR": str(tmp_path / "out")}
+        with patch.dict(os.environ, env, clear=True):
+            Config()
+        with patch.dict(os.environ, {}, clear=True):
+            err = GeminiApiError(f"bad request ?key={file_key}")
+        assert file_key not in str(err)
+        assert "***" in str(err)
 
     def test_api_key_accessible_via_property(self) -> None:
         with patch.dict(os.environ, {"GEMINI_API_KEY": "AIzaSyPropertyTest"}):
