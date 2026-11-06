@@ -66,7 +66,8 @@ class TestConfigSafety:
 
         key_file = tmp_path / "api-key"
         key_file.write_text("AIzaSyFileKey\n")
-        with patch.dict(os.environ, {"GEMINI_API_KEY_FILE": str(key_file)}, clear=True):
+        env = {"GEMINI_API_KEY_FILE": str(key_file), "GEMINI_OUTPUT_DIR": str(tmp_path / "out")}
+        with patch.dict(os.environ, env, clear=True):
             assert Config().api_key == "AIzaSyFileKey"
 
     def test_env_wins_over_file(self, tmp_path: Path) -> None:
@@ -74,7 +75,11 @@ class TestConfigSafety:
 
         key_file = tmp_path / "api-key"
         key_file.write_text("AIzaSyFileKey")
-        env = {"GEMINI_API_KEY": "AIzaSyEnvKey", "GEMINI_API_KEY_FILE": str(key_file)}
+        env = {
+            "GEMINI_API_KEY": "AIzaSyEnvKey",
+            "GEMINI_API_KEY_FILE": str(key_file),
+            "GEMINI_OUTPUT_DIR": str(tmp_path / "out"),
+        }
         with patch.dict(os.environ, env, clear=True):
             assert Config().api_key == "AIzaSyEnvKey"
 
@@ -111,7 +116,8 @@ class TestConfigSafety:
         file_key = "AIzaSyFileKey777"
         key_file = tmp_path / "api-key"
         key_file.write_text(file_key)
-        with patch.dict(os.environ, {"GEMINI_API_KEY_FILE": str(key_file)}, clear=True):
+        env = {"GEMINI_API_KEY_FILE": str(key_file), "GEMINI_OUTPUT_DIR": str(tmp_path / "out")}
+        with patch.dict(os.environ, env, clear=True):
             Config()
         with patch.dict(os.environ, {}, clear=True):
             err = GeminiApiError(f"bad request ?key={file_key}")
