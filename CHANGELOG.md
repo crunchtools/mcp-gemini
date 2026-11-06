@@ -8,6 +8,8 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-06
+
 ### Added
 
 - `GEMINI_API_KEY_FILE` reads the API key from a file when `GEMINI_API_KEY` is
