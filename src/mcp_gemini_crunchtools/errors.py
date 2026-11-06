@@ -7,6 +7,15 @@ Internal errors should be caught and converted to UserError before propagating.
 import os
 
 
+_REGISTERED_SECRETS: set[str] = set()
+
+
+def register_secret(secret: str) -> None:
+    """Register a secret value to be redacted from GeminiApiError messages."""
+    if secret:
+        _REGISTERED_SECRETS.add(secret)
+
+
 class UserError(Exception):
     """Base class for safe errors that can be shown to users.
 
@@ -26,10 +35,8 @@ class GeminiApiError(UserError):
     """
 
     def __init__(self, message: str) -> None:
-        from .config import loaded_api_key  # local import: config imports this module
-
         safe_message = message
-        for key in {os.environ.get("GEMINI_API_KEY", ""), loaded_api_key()}:
+        for key in {os.environ.get("GEMINI_API_KEY", ""), *_REGISTERED_SECRETS}:
             if key:
                 safe_message = safe_message.replace(key, "***")
         super().__init__(f"Gemini API error: {safe_message}")

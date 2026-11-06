@@ -15,8 +15,10 @@ restated here.
 
 ## Security Model Specifics
 
-- **Credentials:** `GEMINI_API_KEY` (required), held as `SecretStr`, read
-  from the environment only. `GeminiApiError` scrubs it from messages, and
+- **Credentials:** `GEMINI_API_KEY` (required unless `GEMINI_API_KEY_FILE`
+  names a readable file holding the key, so the key can stay out of MCP
+  config and `podman inspect`), held as `SecretStr`. `GeminiApiError` scrubs
+  it from messages, and
   `Config.__repr__()`/`__str__()` never expose it.
 - **Input limits:** allowlists for aspect ratios, image sizes (`1K`, `2K`,
   `4K`), Imagen models and text models; input images are capped at 20MB and

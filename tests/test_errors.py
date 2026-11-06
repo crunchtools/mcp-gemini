@@ -106,18 +106,14 @@ class TestConfigSafety:
             Config()
 
     def test_file_sourced_key_redacted_from_api_error(self, tmp_path: Path) -> None:
-        from mcp_gemini_crunchtools import config as config_module
         from mcp_gemini_crunchtools.config import Config
 
         file_key = "AIzaSyFileKey777"
         key_file = tmp_path / "api-key"
         key_file.write_text(file_key)
         with patch.dict(os.environ, {"GEMINI_API_KEY_FILE": str(key_file)}, clear=True):
-            cfg = Config()
-        with (
-            patch.dict(os.environ, {}, clear=True),
-            patch.object(config_module, "_config", cfg),
-        ):
+            Config()
+        with patch.dict(os.environ, {}, clear=True):
             err = GeminiApiError(f"bad request ?key={file_key}")
         assert file_key not in str(err)
         assert "***" in str(err)

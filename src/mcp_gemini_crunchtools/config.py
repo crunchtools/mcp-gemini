@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pydantic import SecretStr
 
-from .errors import ConfigurationError
+from .errors import ConfigurationError, register_secret
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ class Config:
             api_key = self._read_key_file(Path(key_file).expanduser())
 
         self._api_key = SecretStr(api_key)
+        register_secret(api_key)  # redact from GeminiApiError messages
 
         self._output_dir = Path(
             os.environ.get(
@@ -90,14 +91,6 @@ class Config:
 
 
 _config: Config | None = None
-
-
-def loaded_api_key() -> str:
-    """Return the resolved API key if configuration is loaded, else ''.
-
-    Used to redact the key (including one read from a file) from error messages.
-    """
-    return _config.api_key if _config is not None else ""
 
 
 def get_config() -> Config:
