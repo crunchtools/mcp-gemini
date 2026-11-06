@@ -30,10 +30,13 @@ class Config:
         """
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "GEMINI_API_KEY environment variable required. "
-                "Get one at https://aistudio.google.com/apikey"
-            )
+            key_file = os.environ.get("GEMINI_API_KEY_FILE")
+            if not key_file:
+                raise ConfigurationError(
+                    "GEMINI_API_KEY or GEMINI_API_KEY_FILE environment variable "
+                    "required. Get a key at https://aistudio.google.com/apikey"
+                )
+            api_key = self._read_key_file(Path(key_file).expanduser())
 
         self._api_key = SecretStr(api_key)
 
@@ -46,6 +49,23 @@ class Config:
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info("Configuration loaded successfully")
+
+    @staticmethod
+    def _read_key_file(path: Path) -> str:
+        """Read the API key from a file; errors name the path, never the contents."""
+        try:
+            api_key = path.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeDecodeError) as exc:
+            raise ConfigurationError(
+                f"Cannot read GEMINI_API_KEY_FILE at {path} "
+                "(set GEMINI_API_KEY or point GEMINI_API_KEY_FILE at a readable file)"
+            ) from exc
+        if not api_key:
+            raise ConfigurationError(
+                f"GEMINI_API_KEY_FILE at {path} is empty "
+                "(set GEMINI_API_KEY or point GEMINI_API_KEY_FILE at a file containing the key)"
+            )
+        return api_key
 
     @property
     def api_key(self) -> str:
@@ -70,6 +90,14 @@ class Config:
 
 
 _config: Config | None = None
+
+
+def loaded_api_key() -> str:
+    """Return the resolved API key if configuration is loaded, else ''.
+
+    Used to redact the key (including one read from a file) from error messages.
+    """
+    return _config.api_key if _config is not None else ""
 
 
 def get_config() -> Config:

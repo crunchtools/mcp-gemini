@@ -183,6 +183,28 @@ claude mcp add mcp-gemini-crunchtools \
         quay.io/crunchtools/mcp-gemini
 ```
 
+### Keep the API key out of config files (`GEMINI_API_KEY_FILE`)
+
+`--env GEMINI_API_KEY=...` stores the key in plaintext in Claude Code's config,
+and `-e GEMINI_API_KEY` exposes it in `podman inspect`. Instead, store the key in
+a file and pass only its path. `GEMINI_API_KEY` takes precedence; the file is
+read only when it is unset.
+
+```bash
+mkdir -p ~/.config/mcp-gemini && chmod 700 ~/.config/mcp-gemini
+echo "your_key" > ~/.config/mcp-gemini/api-key && chmod 600 ~/.config/mcp-gemini/api-key
+
+claude mcp add mcp-gemini-crunchtools \
+    --env GEMINI_API_KEY_FILE=$HOME/.config/mcp-gemini/api-key \
+    -- uvx mcp-gemini-crunchtools
+
+# Containers: mount as a read-only secret
+podman run -i --rm \
+    -v ~/.config/mcp-gemini/api-key:/run/secrets/api-key:ro,z \
+    -e GEMINI_API_KEY_FILE=/run/secrets/api-key \
+    quay.io/crunchtools/mcp-gemini
+```
+
 ### Optional: Set Output Directory (non-container)
 
 For generated images, audio, and videos when running without a container:

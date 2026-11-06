@@ -8,6 +8,16 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+### Added
+
+- `GEMINI_API_KEY_FILE` reads the API key from a file when `GEMINI_API_KEY` is
+  unset, keeping the key out of MCP config and `podman inspect`.
+
+### Security
+
+- `GeminiApiError` now redacts the resolved key from `Config`, so a key loaded
+  from a file is scrubbed from upstream error messages.
+
 ## [0.6.1] - 2026-10-31
 
 ### Security

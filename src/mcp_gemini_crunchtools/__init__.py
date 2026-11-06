@@ -10,7 +10,9 @@ Usage::
     uvx mcp-gemini-crunchtools
 
 Environment Variables:
-    GEMINI_API_KEY: Required. Google Gemini API key.
+    GEMINI_API_KEY: Google Gemini API key. Required unless GEMINI_API_KEY_FILE is set.
+    GEMINI_API_KEY_FILE: Path to a file containing the API key (used only when
+        GEMINI_API_KEY is unset). Keeps the key out of config and `podman inspect`.
     GEMINI_OUTPUT_DIR: Optional. Directory for generated files.
 """
 

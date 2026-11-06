@@ -26,8 +26,12 @@ class GeminiApiError(UserError):
     """
 
     def __init__(self, message: str) -> None:
-        api_key = os.environ.get("GEMINI_API_KEY", "")
-        safe_message = message.replace(api_key, "***") if api_key else message
+        from .config import loaded_api_key  # local import: config imports this module
+
+        safe_message = message
+        for key in {os.environ.get("GEMINI_API_KEY", ""), loaded_api_key()}:
+            if key:
+                safe_message = safe_message.replace(key, "***")
         super().__init__(f"Gemini API error: {safe_message}")
 
 
