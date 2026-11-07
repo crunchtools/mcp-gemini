@@ -8,6 +8,35 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-07
+
+### Fixed
+
+- Every tool failed with `Gemini API error: Attempted to call a sync close on
+  an async stream`. Nothing in this project is async there: google-genai 3.0
+  swapped its required HTTP library from `httpx` to `httpx2`, which is a
+  separate distribution with its own `SyncByteStream`. The response-size guard
+  wrapped the body stream in a class built on `httpx`'s base, so httpx2's
+  `isinstance` check rejected it when closing the response, and reported that
+  as an async-stream error. The wrapper is now built from whichever flavour
+  produced the response, so the guard works under either library.
+- The container installs its dependencies from `uv.lock` instead of resolving
+  them fresh from `pyproject.toml`. `pip install .` read only the floor pins,
+  so the image shipped whatever had been released that morning -- a dependency
+  set no test had ever run against. That is how the google-genai 3.0 break
+  above reached production with CI green: CI tested the locked versions and the
+  container shipped different ones. Same bug as trentina issue #79.
+- `google-genai` carries an upper bound at the next major, so a release that
+  changes its HTTP layer again arrives as a Dependabot pull request that has to
+  pass the suite rather than as a silent change inside a container build.
+
+### Added
+
+- Tests for the response-size guard against real `httpx` and `httpx2` response
+  objects, parametrised over every flavour installed. The rest of the suite
+  mocks the SDK, so the guard and its stream wrapper were never executed by any
+  test and a break in them could not fail CI -- which is why this one did not.
+
 ## [0.7.0] - 2026-11-06
 
 ### Added

@@ -5,12 +5,12 @@ All tools should use get_client() to access the Gemini API.
 """
 
 import asyncio
+import importlib
 import logging
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, NoReturn
 
-import httpx
 from google import genai
 from google.genai import types
 
@@ -26,13 +26,23 @@ HTTP_TIMEOUT_MS = 300_000
 MAX_RESPONSE_SIZE_BYTES = 100 * 1024 * 1024
 
 
-class _BoundedStream(httpx.SyncByteStream):
-    """Counts body bytes as they are read, for responses with no Content-Length."""
+# Keyed by the HTTP library's stream base class, so each flavour is composed once.
+_bounded_streams: dict[type, type] = {}
 
-    def __init__(self, inner: Any) -> None:
+
+def _compose_bounded_stream(base: Any) -> type:
+    """A byte-counting stream class derived from ``base``.
+
+    Built with ``type`` rather than a class statement because ``base`` is only
+    known at runtime: it is the ``SyncByteStream`` of whichever HTTP library
+    google-genai brought in, and the library checks the wrapper against that
+    class by ``isinstance`` when it closes the response.
+    """
+
+    def _init(self: Any, inner: Any) -> None:
         self._inner = inner
 
-    def __iter__(self) -> Iterator[bytes]:
+    def _iterate(self: Any) -> Iterator[bytes]:
         total = 0
         for chunk in self._inner:
             total += len(chunk)
@@ -40,16 +50,64 @@ class _BoundedStream(httpx.SyncByteStream):
                 raise GeminiApiError("Response too large")
             yield chunk
 
-    def close(self) -> None:
+    def _close(self: Any) -> None:
         self._inner.close()
 
+    return type(
+        "_BoundedStream",
+        (base,),
+        {
+            "__doc__": "Counts body bytes as they are read, for an unsized body.",
+            "__init__": _init,
+            "__iter__": _iterate,
+            "close": _close,
+        },
+    )
 
-def _reject_oversized(response: httpx.Response) -> None:
-    """httpx response hook: runs before the body is read, so it can bound it."""
+
+def _bounded_stream_class(response: object) -> type | None:
+    """The byte-counting stream class for the library that built ``response``.
+
+    google-genai's HTTP layer is not necessarily the ``httpx`` this project
+    imports. 2.x requires ``httpx`` and offers ``httpx2`` as an extra; 3.0
+    inverted that. ``httpx2`` is a separate distribution carrying its own
+    ``SyncByteStream``, so a wrapper built on the other flavour's base fails the
+    library's own ``isinstance`` check when the response is closed -- which
+    httpx2 reports as "Attempted to call a sync close on an async stream", a
+    message about async code in a project that has none here.
+
+    Keyed on the response rather than on its stream, because a response is
+    always an instance of the library's own class while a stream can be any
+    object the library was handed. Returns ``None`` if that library offers no
+    ``SyncByteStream`` to build on.
+    """
+    flavour = importlib.import_module(type(response).__module__.split(".")[0])
+    base = getattr(flavour, "SyncByteStream", None)
+    if base is None:
+        return None
+    cached = _bounded_streams.get(base)
+    if cached is None:
+        cached = _compose_bounded_stream(base)
+        _bounded_streams[base] = cached
+    return cached
+
+
+def _reject_oversized(response: Any) -> None:
+    """Response hook: runs before the body is read, so it can bound it."""
     content_length = response.headers.get("content-length")
     if content_length and int(content_length) > MAX_RESPONSE_SIZE_BYTES:
         raise GeminiApiError("Response too large")
-    response.stream = _BoundedStream(response.stream)
+    bounded = _bounded_stream_class(response)
+    if bounded is None:
+        # Bounding a pathological body is worth less than answering ordinary
+        # calls, and raising here would fail every one of them -- which is what
+        # the 3.0 upgrade did. A declared size is still refused above.
+        logger.warning(
+            "%s has no SyncByteStream; response size bounded by Content-Length only",
+            type(response).__module__.split(".")[0],
+        )
+        return
+    response.stream = bounded(response.stream)
 
 
 class GeminiClient:

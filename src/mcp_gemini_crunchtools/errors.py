@@ -6,7 +6,6 @@ Internal errors should be caught and converted to UserError before propagating.
 
 import os
 
-
 _REGISTERED_SECRETS: set[str] = set()
 
 
