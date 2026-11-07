@@ -65,7 +65,7 @@ def _compose_bounded_stream(base: Any) -> type:
     )
 
 
-def _bounded_stream_class(response: object) -> type | None:
+def _bounded_stream_class(response: object) -> type:
     """The byte-counting stream class for the library that built ``response``.
 
     google-genai's HTTP layer is not necessarily the ``httpx`` this project
@@ -78,13 +78,18 @@ def _bounded_stream_class(response: object) -> type | None:
 
     Keyed on the response rather than on its stream, because a response is
     always an instance of the library's own class while a stream can be any
-    object the library was handed. Returns ``None`` if that library offers no
-    ``SyncByteStream`` to build on.
+    object the library was handed.
+
+    Raises ``GeminiApiError`` if that library offers no ``SyncByteStream``: the
+    constitution caps responses at 100MB, and without the library's own stream
+    base there is no way to count a body that arrives without a declared size.
+    An unbounded body is refused rather than passed through uncapped.
     """
-    flavour = importlib.import_module(type(response).__module__.split(".")[0])
+    name = type(response).__module__.split(".")[0]
+    flavour = importlib.import_module(name)
     base = getattr(flavour, "SyncByteStream", None)
     if base is None:
-        return None
+        raise GeminiApiError(f"cannot bound a response body: {name} has no SyncByteStream")
     cached = _bounded_streams.get(base)
     if cached is None:
         cached = _compose_bounded_stream(base)
@@ -97,17 +102,7 @@ def _reject_oversized(response: Any) -> None:
     content_length = response.headers.get("content-length")
     if content_length and int(content_length) > MAX_RESPONSE_SIZE_BYTES:
         raise GeminiApiError("Response too large")
-    bounded = _bounded_stream_class(response)
-    if bounded is None:
-        # Bounding a pathological body is worth less than answering ordinary
-        # calls, and raising here would fail every one of them -- which is what
-        # the 3.0 upgrade did. A declared size is still refused above.
-        logger.warning(
-            "%s has no SyncByteStream; response size bounded by Content-Length only",
-            type(response).__module__.split(".")[0],
-        )
-        return
-    response.stream = bounded(response.stream)
+    response.stream = _bounded_stream_class(response)(response.stream)
 
 
 class GeminiClient:

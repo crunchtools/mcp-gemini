@@ -119,30 +119,24 @@ def test_the_wrapper_class_is_built_once_per_flavour() -> None:
     assert len(seen) == 1
 
 
-class TestAnUnknownHttpLibraryDegradesInsteadOfFailing:
-    """A library with no ``SyncByteStream`` must not break every call.
+class TestAnHttpLibraryWithNoStreamBaseIsRefused:
+    """A body that cannot be counted is refused, not passed through uncapped.
 
-    This guard is defence against a pathological response body. Enforcing it by
-    raising on every ordinary response is the larger outage, and is what the
-    google-genai 3.0 upgrade actually caused.
+    The constitution caps responses at 100MB. Without the library's own
+    ``SyncByteStream`` there is no way to count a body that arrives with no
+    declared size, so the call fails rather than silently losing the cap.
     """
 
-    def test_the_body_is_left_unwrapped_and_the_call_proceeds(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_a_body_that_cannot_be_bounded_raises(self) -> None:
         flavour = _flavour("httpx")
-        response = flavour.Response(200, content=b"body")
-        original = response.stream
+        response = flavour.Response(200, content=iter([b"body"]))
 
-        with caplog.at_level("WARNING"), pytest.MonkeyPatch.context() as patched:
+        with pytest.MonkeyPatch.context() as patched:
             patched.delattr(flavour, "SyncByteStream")
-            _reject_oversized(response)
+            with pytest.raises(GeminiApiError, match="no SyncByteStream"):
+                _reject_oversized(response)
 
-        assert response.stream is original
-        assert response.read() == b"body"
-        assert "Content-Length only" in caplog.text
-
-    def test_a_declared_oversize_body_is_still_refused(self) -> None:
+    def test_a_declared_oversize_body_is_refused_first(self) -> None:
         """The header check runs before the wrapper, so it is unaffected."""
         flavour = _flavour("httpx")
         too_big = client_module.MAX_RESPONSE_SIZE_BYTES + 1

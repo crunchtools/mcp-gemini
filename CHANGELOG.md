@@ -20,6 +20,10 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
   `isinstance` check rejected it when closing the response, and reported that
   as an async-stream error. The wrapper is now built from whichever flavour
   produced the response, so the guard works under either library.
+- An HTTP library offering no `SyncByteStream` at all now fails the call with
+  a clear message instead of passing the body through uncapped. The
+  constitution caps responses at 100MB and an uncountable body cannot honour
+  that.
 - The container installs its dependencies from `uv.lock` instead of resolving
   them fresh from `pyproject.toml`. `pip install .` read only the floor pins,
   so the image shipped whatever had been released that morning -- a dependency
