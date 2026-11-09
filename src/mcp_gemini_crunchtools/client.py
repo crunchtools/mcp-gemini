@@ -8,6 +8,7 @@ import asyncio
 import importlib
 import logging
 from collections.abc import Iterator
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -24,6 +25,14 @@ logger = logging.getLogger(__name__)
 HTTP_TIMEOUT_MS = 300_000
 # Generated images arrive inline as base64, so this is sized for those.
 MAX_RESPONSE_SIZE_BYTES = 100 * 1024 * 1024
+
+# Identify this client by name (constitution v1.36.0, MCP Server profile
+# Layer 3). The version comes from installed package metadata so it cannot
+# drift from pyproject.toml.
+USER_AGENT = (
+    f"mcp-gemini-crunchtools/{version('mcp-gemini-crunchtools')} "
+    "(+https://github.com/crunchtools/mcp-gemini)"
+)
 
 
 # Keyed by the HTTP library's stream base class, so each flavour is composed once.
@@ -100,8 +109,18 @@ def _bounded_stream_class(response: object) -> type:
 def _reject_oversized(response: Any) -> None:
     """Response hook: runs before the body is read, so it can bound it."""
     content_length = response.headers.get("content-length")
-    if content_length and int(content_length) > MAX_RESPONSE_SIZE_BYTES:
-        raise GeminiApiError("Response too large")
+    # `.isdigit()` because the header is whatever the far end sent: an
+    # unguarded `int()` turns a malformed value into a ValueError escaping as
+    # itself rather than a GeminiApiError.
+    if (
+        content_length
+        and content_length.isdigit()
+        and int(content_length) > MAX_RESPONSE_SIZE_BYTES
+    ):
+        raise GeminiApiError(
+            f"Response too large: declared {content_length}, over the "
+            f"{MAX_RESPONSE_SIZE_BYTES} byte limit"
+        )
     response.stream = _bounded_stream_class(response)(response.stream)
 
 
@@ -125,8 +144,11 @@ class GeminiClient:
             http_options=types.HttpOptions(
                 timeout=HTTP_TIMEOUT_MS,
                 # Uncompressed, so the bytes the size limit counts are the
-                # bytes the SDK reads; a gzip body could expand past it.
-                headers={"Accept-Encoding": "identity"},
+                # bytes the SDK reads; a gzip body could expand past it. And
+                # the agent string the fleet requires: the SDK owns the
+                # transport, so `check_http_client` skips this repo and cannot
+                # notice the header missing (constitution v1.36.0, Layer 3).
+                headers={"Accept-Encoding": "identity", "User-Agent": USER_AGENT},
                 client_args={"event_hooks": {"response": [_reject_oversized]}},
             ),
         )

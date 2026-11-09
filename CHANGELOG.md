@@ -8,6 +8,35 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-09
+
+### Added
+
+- **The client says what it is.** Requests carry
+  `User-Agent: mcp-gemini-crunchtools/<version> (+<repo url>)`, with the
+  version read from installed package metadata, alongside the
+  `Accept-Encoding: identity` already set there.
+
+  Worth recording why this needed doing by hand: `google-genai` owns the
+  transport, so `check_http_client` from constitution v1.36.0 skips this repo
+  entirely — it finds no HTTP import under `src/`. The check cannot catch a
+  missing agent string here, which is precisely why the header is set
+  deliberately and asserted by a test (RT #1601).
+
+### Fixed
+
+- A malformed `Content-Length` is no longer an unhandled `ValueError`. The
+  header is whatever the far end sent, and an unguarded `int()` on it escaped
+  as itself rather than as a `GeminiApiError`. The message now also says what
+  was declared and what the limit is.
+
+### Changed
+
+- Inherits constitution v1.36.0. This repo's response guard — a response hook
+  that bounds the stream before the body is read, with compression refused so
+  the counted bytes are the bytes the SDK reads — is what the profile's
+  "measuring at the transport counts wire bytes" note is drawn from.
+
 ## [0.7.1] - 2026-11-07
 
 ### Fixed

@@ -60,7 +60,7 @@ READ_ONLY = {"readOnlyHint": True}
 
 mcp = FastMCP(
     name="mcp-gemini-crunchtools",
-    version="0.7.1",
+    version="0.8.0",
     instructions=(
         "Secure MCP server for Google Gemini AI - text, image, video, research, and more. "
         "Generated files (images, audio, video) are saved to the output directory. "
