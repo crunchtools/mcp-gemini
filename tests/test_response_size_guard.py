@@ -12,6 +12,8 @@ requires is the one under test.
 """
 
 import importlib
+from importlib.metadata import version
+from typing import Any
 
 import pytest
 
@@ -30,6 +32,21 @@ def _flavour(name: str):
 @pytest.mark.parametrize("name", FLAVOURS)
 class TestGuardSurvivesEveryHttpxFlavour:
     """The wrapper must satisfy the isinstance check of the library that made it."""
+
+    def test_a_malformed_declared_length_does_not_crash(self, name: str) -> None:
+        """The header is whatever the far end sent.
+
+        An unguarded `int()` on it raised a ValueError escaping as itself,
+        which is neither a GeminiApiError nor something a caller can act on.
+        """
+        flavour = _flavour(name)
+        response = flavour.Response(200, content=b'{"ok": true}')
+        response.headers["content-length"] = "not-a-number"
+
+        _reject_oversized(response)
+        response.read()
+
+        assert response.content == b'{"ok": true}'
 
     def test_response_closes_after_the_guard_wraps_it(self, name: str) -> None:
         flavour = _flavour(name)
@@ -146,3 +163,39 @@ class TestAnHttpLibraryWithNoStreamBaseIsRefused:
             patched.delattr(flavour, "SyncByteStream")
             with pytest.raises(GeminiApiError, match="too large"):
                 _reject_oversized(response)
+
+
+class TestUserAgent:
+    """The SDK owns the transport, so this header has to be set deliberately.
+
+    `check_http_client` skips this repo -- it finds no HTTP import under `src/`
+    -- which is exactly why the agent string is asserted here rather than left
+    to the fleet check to notice (constitution v1.36.0, Layer 3).
+    """
+
+    def test_the_client_is_built_with_a_product_user_agent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GEMINI_API_KEY", "test-key-long-enough")
+        import mcp_gemini_crunchtools.config as config_mod
+
+        config_mod._config = None
+
+        captured: dict[str, Any] = {}
+
+        class _FakeClient:
+            def __init__(self, **kwargs: object) -> None:
+                captured.update(kwargs)
+
+        monkeypatch.setattr(client_module.genai, "Client", _FakeClient)
+        client_module.GeminiClient()
+
+        headers = captured["http_options"].headers
+        expected = (
+            f"mcp-gemini-crunchtools/{version('mcp-gemini-crunchtools')} "
+            "(+https://github.com/crunchtools/mcp-gemini)"
+        )
+        assert headers["User-Agent"] == expected
+        # Still uncompressed, which is what makes the size limit count the
+        # bytes the SDK actually reads.
+        assert headers["Accept-Encoding"] == "identity"
