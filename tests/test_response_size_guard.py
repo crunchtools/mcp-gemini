@@ -33,6 +33,21 @@ def _flavour(name: str):
 class TestGuardSurvivesEveryHttpxFlavour:
     """The wrapper must satisfy the isinstance check of the library that made it."""
 
+    def test_a_malformed_declared_length_does_not_crash(self, name: str) -> None:
+        """The header is whatever the far end sent.
+
+        An unguarded `int()` on it raised a ValueError escaping as itself,
+        which is neither a GeminiApiError nor something a caller can act on.
+        """
+        flavour = _flavour(name)
+        response = flavour.Response(200, content=b'{"ok": true}')
+        response.headers["content-length"] = "not-a-number"
+
+        _reject_oversized(response)
+        response.read()
+
+        assert response.content == b'{"ok": true}'
+
     def test_response_closes_after_the_guard_wraps_it(self, name: str) -> None:
         flavour = _flavour(name)
         response = flavour.Response(200, content=b"body")
