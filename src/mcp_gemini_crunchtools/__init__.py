@@ -22,7 +22,7 @@ import sys
 
 from .server import mcp
 
-__version__ = "0.8.2"
+__version__ = "0.9.0"
 __all__ = ["main", "mcp"]
 
 DEFAULT_HTTP_PORT = 8011
